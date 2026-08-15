@@ -122,3 +122,9 @@ the classification argued.
   zero either, so the fail-closed rule excluded **0** axes. The defect is real — a zero
   scale would have been scored as a perfect 0.0 — and on this frame it had no opportunity
   to fire. The Tier-1 frame is audited separately and this entry gains its result there.
+
+- **audit result, Tier1-36 frame** — the frozen pipeline was never run on Tier 1, so the
+  historical side does not apply there. On the corrected side the 24-epoch IQR was never
+  exactly zero across 108 axis-instances, so the fail-closed rule excluded **0** axes.
+  Across both frames D-7 has therefore had no opportunity to fire; it remains a real
+  defect, and the corrected rule remains fail-closed.
