@@ -1,0 +1,24 @@
+# Figure captions and source fields
+
+Presentation only. Every plotted number is read from `results/corrected/battery_g2.json` or `battery_tier1.json`; JSON paths below are relative to `per_run[]` unless stated. Where one run is shown, the selection rule is deterministic — the run whose ρ̂*_LE is the median of its eligible group, ties broken by run id — so the choice can be checked rather than trusted.
+
+Produced at `git_head` 6fd1f8b, `git_tree_dirty` False.
+
+
+**F1 `concept_trajectory.pdf`** — one Tier-1 incompatible run, `c10n_worst_elr_seed0`. Selection rule: the median ρ̂*_LE among the 27 Tier-1 runs classified incompatible at δ=0.10 (ties broken by run id); ρ̂*_LE = 0.3797. Sources: `per_run[].A1.axes.{ID,WC,OOD}.ghat` (24-point curves) and `.t_star_grid_index` (markers); `per_run[].A2.per_delta.delta_0.1.F_delta` (empty, hence the annotation). Display transform: none — curves are plotted as stored against the retained-epoch grid.
+
+**F2 `taxonomy_diagram.pdf`** — schematic, no data. The ρ̂*_LE axis against δ with the ±0.025 indeterminate band and the four classes; the solved/unsolved split is annotated as “∃ registered selector with Ĵ ≤ δ”, the registered set being {E(τ=1), NA, ER-argmax}. Post-registered selectors never gate.
+
+**F3 `rho_dotplot.pdf` [HEADLINE]** — all 51 audited runs, ρ̂*_LE sorted ascending within frame, coloured by the δ=0.10 class. **Log y axis**, chosen because ρ̂*_LE spans roughly three orders of magnitude and a linear axis collapses everything below δ into the baseline; the single ρ̂*=0.0000 run is drawn at the axis floor (1e-3) and annotated, since zero has no position on a log scale. Sources: `per_run[].A2.rho_star_LE` and `per_run[].A2.per_delta.delta_0.1.taxonomy` from both battery files. Display transform: sorting, and the floor substitution just described.
+
+**F4 `budget_curves.pdf` [HEADLINE]** — clean-label supply curves, 2×2 by (selection objective → evaluated axis). Line is the median q(n) across the 36 Tier-1 runs, band is the interquartile range; n on a log axis; the q=0.9 target is dashed. The two OOD-target-from-ID panels never approach the target — median max q 0.216 (ID→OOD) and 0.301 (mixed→OOD) — while OOD→OOD reaches it. Source: `per_run[].A11.curves.<pair>.q` (six n values, B=1000, assessment on D_assess only). Display transform: median and IQR across runs, as specified.
+
+**F5 `case_study.pdf`** — the Phase-II compatible run `cifar100_symmetric0.6_ce_seed2` (ρ̂*_LE = 0.0000). The shaded band is the single feasible checkpoint, w = 1/24 = 0.042; uniform-random baseline p_unif = 0.042. Vertical rules mark where each selector chose. Sources: `A1.axes.*.ghat`, `A2.per_delta.delta_0.1.{F_delta,w_delta}`, `A4.selectors.*.grid_index`, `A5.per_delta.delta_0.1.p_unif`. LW-N is drawn but is non-gating.
+
+**F6 `certificate.pdf`** — Tier-1 run `c100n_gce_seed2`, selected as the median ρ̂*_LE among the 3 certificate-bearing runs. Each strip is the δ=0.10 feasible set for one (score | pool) OOD variant; the pair whose feasible sets are disjoint is highlighted. The top two strips are the ID and WC axes for context. Sources: `A9.per_score_pool.<u|o>.F_delta`, `A9.two_world_certificate.pairs[].{pair,disjoint}`, and — for the two context strips only — a threshold read of the stored `A1.axes.{ID,WC}.ghat` at 0.10. No quantity is recomputed; thresholding a stored curve is display binning.
+
+**F7 `oracle_shift.pdf` [appendix]** — A1 oracle-epoch scatter, corrected (24-grid raw argmin) against frozen-historical (120-grid smoothed argmin), with the identity line. **ID and OOD only**: the WC axis has no frozen-historical counterpart, because the frozen frame's `tail` axis was R_tail_static over 120 points — a different object rather than a second reading of the same one, so plotting it against the corrected WC axis would be a category error. Counts of identical epochs are annotated (Phase II: ID 1/15, OOD 2/15). Sources: `A1.axes.<a>.t_star_epoch` and `A1.axes.<a>.frozen_historical.t_star_120`.
+
+**F8 `aggregation_heatmap.pdf` [appendix, PARTIAL]** — per-(score | pool) corrected OOD oracle epoch (top) and w$_{0.10}$ (bottom) across the 36 Tier-1 runs, columns sorted by ρ̂*_LE. Sources: `A9.per_score_pool.<u|o>.{ood_t_star_epoch,w_delta}`. **The requested mean/min/max aggregation row groups are NOT drawn.** The aggregated OOD curves are stored (`A9.aggregation_sensitivity.<u>.{mean,min,max}`), but their w_δ is not, and deriving it would mean re-forming the joint frame — maximizing over the ID, WC and aggregated-OOD normalized regrets and thresholding — which is a new quantity, not a display transform. Reported rather than computed.
+
+**GA `graphical_abstract.pdf`** — composite, 5.1×2.0in (≈13×5cm). Left: miniature of F1, same run `c10n_worst_elr_seed0` under the same median rule. Right: miniature of F3, all 51 runs pooled and sorted, log y, δ=0.10 rule drawn. Banner text as supplied. Sources are those of F1 and F3; no additional field is read.
