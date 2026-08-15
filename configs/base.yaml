@@ -1,0 +1,59 @@
+# G1 audit — base config (every hyperparameter lives here; none in code).
+# scripts/run_sweep.py expands this over {dataset x noise x learner x seed}.
+
+experiment: g1_checkpoint_conflict_audit
+data_root: /data/workspace/sanghoon/fedcore2/data   # local CIFAR (no download)
+mask_dir: results/noise_masks                        # shared CE/ELR noisy labels
+results_dir: results/runs
+
+model:
+  arch: preact_resnet18
+  n_classes: null            # filled from dataset (10 / 100)
+
+train:
+  optimizer: sgd
+  lr: 0.02
+  momentum: 0.9
+  weight_decay: 5.0e-4
+  nesterov: false
+  lr_schedule: cosine        # cosine | step
+  epochs: 120
+  batch_size: 128
+  augmentation: [random_crop_32_pad4, random_horizontal_flip]
+
+learners:
+  ce: {}
+  elr:                       # Early-Learning Regularization
+    reference: "Liu, Niles-Weed, Razavian, Fernandez-Granda. Early-Learning Regularization Prevents Memorization of Noisy Labels. NeurIPS 2020"
+    per_dataset:             # the paper's CIFAR settings for plain ELR (not ELR+)
+      cifar10:  {lambda: 3.0, beta: 0.7}
+      cifar100: {lambda: 7.0, beta: 0.9}
+
+eval:                        # every epoch on held-out data never seen in training
+  eval_batch_size: 512       # inference-only; does not affect any logged metric
+  tail_frac: 0.30
+  tail_static_reference: ce_seed0_final   # class set fixed from CE seed-0 final epoch
+  ood_scores: [msp, energy]
+  ood_energy_T: 1.0
+  ood_semantic_pools: [svhn, cross_cifar] # primary endpoint: energy vs semantic
+  ood_covariate_pool: CIFAR-C-local       # local imagecorruptions subsample (NOT official CIFAR-C)
+  ood_covariate_cadence: 1                # epochs between covariate-pool eval (cost knob)
+  smooth_window: 3           # moving-average window for oracle-epoch argmin
+
+checkpointing:
+  save_every: 10             # + always save final epoch
+  resume: true
+
+seeds: [0, 1, 2]
+datasets: [cifar10, cifar100]
+noise_configs:
+  - {type: symmetric, eta: 0.2}
+  - {type: symmetric, eta: 0.4}
+  - {type: symmetric, eta: 0.6}
+  - {type: asymmetric, eta: 0.4}
+
+analysis:
+  bootstrap: bca
+  n_boot: 10000
+  ci_alpha: 0.05
+  ncr_threshold: 0.10        # pre-registered decision threshold

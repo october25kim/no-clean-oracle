@@ -1,0 +1,17 @@
+# B2 rerun -- owner-approved 2026-08-12.
+#
+# Reruns the 5 (dataset x noise x learner) cells where G1 found ID<->OOD conflict,
+# this time RETAINING a checkpoint every 5 epochs, so G2's representation-based and
+# noisy-validation baselines have a selection trajectory to work on. G1 kept only one
+# checkpoint per run, which is why this is needed at all.
+#
+# Only the two knobs that must differ are set here. Everything the G1 verdict depends
+# on -- seeds, the 24 sealed noise masks, the frozen OOD pools, optimizer, schedule,
+# 120 epochs, eval -- is inherited from base.yaml unchanged. That inheritance is what
+# makes the binding trajectory-identity check meaningful: if any logged metric moves,
+# the cause is the environment, not the configuration.
+extends: base.yaml
+
+results_dir: results/runs_b2      # never write into the G1 originals
+checkpointing:
+  save_every: 5                   # 120 epochs -> 24 retained checkpoints per run

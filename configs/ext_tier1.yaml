@@ -1,0 +1,54 @@
+# Tier 1 of the real-noise extension — owner-approved 2026-08-13.
+#
+# CIFAR-N x {CE, ELR, SOP, GCE} x 3 seeds = 36 runs under the unified trajectory
+# protocol (Decision A): everything the G1/B2 sweep pinned — PreAct ResNet-18, 120
+# epochs, cosine annealing, batch size, augmentation, determinism — is inherited from
+# base.yaml unchanged. Only what must differ is declared here.
+extends: base.yaml
+
+results_dir: results/runs_ext        # never write into the G1 or B2 trees
+checkpointing:
+  save_every: 5                      # 120 epochs -> 24 retained checkpoints per run
+
+# Real-noise splits. The key is the split's EXACT name; nothing in the pipeline matches
+# these by substring — 'c10n_worst' and 'c100n' share no prefix relationship that a
+# substring test could confuse, but the lookup is exact by construction regardless.
+real_noise_splits:
+  c10n_worst:
+    dataset: cifar10
+    mask_file: c10n_worst.npz
+    source_key: worse_label
+  c10n_random1:
+    dataset: cifar10
+    mask_file: c10n_random1.npz
+    source_key: random_label1
+  c100n:
+    dataset: cifar100
+    mask_file: c100n.npz
+    source_key: noisy_label
+mask_dir_real: results/cifar_n_masks
+
+learners:
+  ce: {}
+  elr:
+    reference: "Liu, Niles-Weed, Razavian, Fernandez-Granda. Early-Learning Regularization Prevents Memorization of Noisy Labels. NeurIPS 2020"
+    per_dataset:
+      cifar10:  {lambda: 3.0, beta: 0.7}
+      cifar100: {lambda: 7.0, beta: 0.9}
+  gce:
+    reference: "Zhang & Sabuncu. Generalized Cross Entropy Loss for Training Deep Neural Networks with Noisy Labels. NeurIPS 2018"
+    q: 0.7                           # paper CIFAR default; no truncation variant
+  sop:
+    reference: "Liu, Zhu, Qu, You. Robust Training under Label Noise by Over-parameterization. ICML 2022"
+    transcription: docs/TRANSCRIPTION.md
+    # Pinned 2026-08-13 (Option 1, repository symmetric row). Keyed by SPLIT, not by
+    # dataset, so the pin is explicit for each of the three and a new split cannot
+    # silently inherit a value.
+    per_split:
+      c10n_worst:   {alpha_u: 10.0, alpha_v: 10.0}
+      c10n_random1: {alpha_u: 10.0, alpha_v: 10.0}
+      c100n:        {alpha_u: 1.0,  alpha_v: 10.0}
+
+# The 36-run grid
+splits: [c10n_worst, c10n_random1, c100n]
+seeds: [0, 1, 2]

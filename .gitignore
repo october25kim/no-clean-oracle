@@ -1,0 +1,24 @@
+# Results are large, machine-generated, and integrity-tracked by sha256 manifests
+# (results/noise_masks/MANIFEST.json, results/reviewer_bundle/BUNDLE.sha256) rather
+# than by git. Keeping them out also keeps the repo a code/spec record, which is what
+# reports need to cite.
+results/
+
+# Model state, anywhere
+*.pt
+*.pth
+*.npz
+
+# Archives and bundles
+*.tar.gz
+*.zip
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Downloaded third-party data (CIFAR-N labels); provenance in
+# results/cifar_n_masks/MANIFEST.json
+data/
+.hypothesis/

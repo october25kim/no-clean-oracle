@@ -1,0 +1,14 @@
+# G1 audit — pinned environment. Training runs in the fedcore-c400r image
+# (torch 2.3.0 / torchvision 0.18.0); the OOD-pool corruption library is pinned here
+# and its versions are also recorded in each frozen npz's provenance meta.
+torch==2.3.0
+torchvision==0.18.0
+numpy==1.26.4
+scipy==1.13.1
+scikit-learn>=1.3
+pyyaml>=6.0
+matplotlib>=3.7
+pytest>=7.4
+# CIFAR-C-local covariate pool (sealed provenance; NOT official CIFAR-C):
+imagecorruptions==1.1.2
+opencv-python-headless==4.10.0.84
