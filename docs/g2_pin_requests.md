@@ -240,6 +240,14 @@ timestamp, without author fields. The immutability evidence is therefore the pub
 snapshot's own timestamp, and the internal hashes remain citable because they were never
 rewritten.
 
+- **R7.** Reports travel with the anchor. *"Every milestone/final report is ALSO written as
+  a tracked document under `docs/reports/REPORT_<n>.md` (full text, tables included; sealed
+  values only as commitments per the sealing rules) and included in the next R6 snapshot
+  push. Chat delivery becomes a courtesy copy; the anchored file is the authoritative
+  transport. Numbers already unsealed under §4 may appear in these reports; still-sealed
+  quantities may not."* Adopted 2026-08-15 after six consecutive reports failed to reach
+  the review side as chat attachments, which had already caused one factual misreading of
+  project state — a transport that silently drops content is not a transport.
 - **R6-guard** (appended 2026-08-15, before the first anchor push). Before EVERY snapshot
   push, verify that the remote's HEAD equals the last snapshot HEAD we pushed. Any
   foreign commit → STOP and report, do not push. This exists because the first anchor

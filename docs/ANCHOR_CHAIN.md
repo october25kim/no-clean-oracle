@@ -90,15 +90,38 @@ name back would have severed GitHub's rename redirect and captured that project'
 hard-coded push URL into our public record. The R6-guard in
 `docs/g2_pin_requests.md` is the standing check that grew out of that near miss.
 
+### Push history
+
+| # | public commit | pushed (UTC) | internal lineage | subject |
+|---|---|---|---|---|
+| 1 | `7926c582624e6d0670926c9629bfe302e3e2ae56` | 2026-08-15T05:07:57Z | `2bf5332` | post-Tier1-forward-pass, pre-remediation |
+| 2 | `dfc9263befa372a8fa071db02426c297f162db3b` | 2026-08-15T05:26:39Z | `483065c` | Remediation Analysis Plan v2 committed |
+
 ### R6-guard baseline
 
 Reference HEAD for the equality check that precedes every future snapshot push:
 
 ```
-7926c582624e6d0670926c9629bfe302e3e2ae56
+dfc9263befa372a8fa071db02426c297f162db3b
 ```
 
 Before the next push, the remote's HEAD must equal this value. Any other commit means a
 foreign writer reached the anchor, and the push STOPS pending a report. After each
-successful push the baseline is updated to the newly pushed HEAD in this same section.
+successful push the baseline is updated to the newly pushed HEAD, and the push history
+above gains a row.
+
+### Snapshots are chained, not replaced
+
+The first snapshot was an orphan repository built from `git archive`. Pushing a second
+orphan snapshot to the same branch is a non-fast-forward, and the only way to force it
+through would discard the previously anchored commit — destroying exactly the public
+timestamp the anchor exists to provide. So from snapshot 2 onward each snapshot is built
+as a **child of the current public HEAD**: clone the public repository, replace the
+worktree with the internal tracked tree, commit, push fast-forward. Every earlier anchor
+stays reachable as an ancestor and stays citable, while the new state is a normal
+fast-forward.
+
+This changes nothing about what crosses the boundary. The public history is composed
+solely of snapshot commits authored by `october25kim@users.noreply.github.com`; no
+internal commit object, parent chain, or author field is ever carried over.
 
