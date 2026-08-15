@@ -116,3 +116,35 @@ ledger. Step (2) is replaced by: cite EXP-001/002 from the
 ledger as already-exposed inputs where A1/A9 require them. The
 outcome-informed scope disclosure in the header already covers
 this.
+
+## Follow-up restorations (2026-08-15, pin answers 14 and 20)
+
+Two values were dropped when the plan was compressed. Restored
+here as follow-up text, not edited into §1/§2.
+
+**A9 / D-7 audit — grid separation (pin 14).** The D-7 firing
+audit concerns the FROZEN pipeline and is therefore adjudicated
+on the 120-point IQRs as historically computed: did
+`selection.py:31` ever map a zero scale to a normalized regret
+of 0.0? The corrected analyses use ONLY the 24-epoch IQR with
+fail-closed exclusion, and 24-grid zero-IQR incidence is
+reported separately. The two grids never mix in this audit.
+
+**A13 — equivalence margin (pin 20).** Margin = 0.10 on NCR;
+criterion = BCa 95% upper bound below the margin. Descriptive
+only, per the [SENSITIVITY] tag A13 already carries; the frozen
+WEAK verdict is untouched.
+
+**A10b — TGS-N deferred (pin 15).** TGS-N-torsion and TGS-N-full
+are split out of A10 into a deferred registered addendum. The
+battery proceeds WITHOUT them and they gate nothing. The A10b
+path is: fetch arXiv 2605.08870, produce
+`docs/TGS_TRANSCRIPTION.md` (statistic, sampling, weights,
+direction, verbatim quotes and hashes) plus proposed pins,
+review side confirms, then it executes. A10 as executed
+therefore covers LW-N only.
+
+**Taxonomy gating (pin 3).** compatible-solved is decided by the
+registered selector set {E(τ=1), NA, ER-argmax} alone.
+Post-registered selectors — LW-N now, TGS-N later — are reported
+but never gate the taxonomy.
