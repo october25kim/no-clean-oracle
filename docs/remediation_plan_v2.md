@@ -148,3 +148,18 @@ therefore covers LW-N only.
 registered selector set {E(τ=1), NA, ER-argmax} alone.
 Post-registered selectors — LW-N now, TGS-N later — are reported
 but never gate the taxonomy.
+
+## A9-ADDENDUM (post-adjudication sensitivity)
+
+Registered 2026-08-15 at anchored public HEAD c7d98e17.
+
+A9-ADDENDUM (post-adjudication sensitivity, registered
+2026-08-15 / c7d98e17): for each aggregation variant v ∈
+{energy-min, energy-max, msp-mean, msp-min, msp-max} over the
+semantic pools, construct R_OOD^v, assign it its own corrected
+24-grid oracle and 24-epoch IQR denominator (fail-closed), hold
+ID and WC fixed, re-derive max_a ĝ_a(t) and the A3 taxonomy at
+δ ∈ {0.05, 0.10, 0.20}, both frames. This addendum cannot alter
+the anchored step-6 adjudication, which stands on the primary
+aggregation; its output annotates robustness and is published
+either way. Executed after this registration is anchored.
