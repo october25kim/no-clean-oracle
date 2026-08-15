@@ -248,6 +248,12 @@ rewritten.
   quantities may not."* Adopted 2026-08-15 after six consecutive reports failed to reach
   the review side as chat attachments, which had already caused one factual misreading of
   project state — a transport that silently drops content is not a transport.
+- **R7-clarification** (2026-08-15). *"R7 applies to ALL report types — progress, hold,
+  and pin-request batches included, not only milestones. A session waiting on review-side
+  input anchors the question batch itself; waiting must never be invisible."* The failure
+  this closes is specific: a pin-request batch that never arrives looks identical to a
+  session working quietly, so the review side has no way to tell that it is the one
+  holding the work up.
 - **R6-guard** (appended 2026-08-15, before the first anchor push). Before EVERY snapshot
   push, verify that the remote's HEAD equals the last snapshot HEAD we pushed. Any
   foreign commit → STOP and report, do not push. This exists because the first anchor

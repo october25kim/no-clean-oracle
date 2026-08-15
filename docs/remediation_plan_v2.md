@@ -103,3 +103,16 @@ Layer tags on every number; frozen/corrected disagreements
 published side by side; spec G.2 forbidden phrases bind; defect
 ledger updated (incl. D-7) in the same commit as any analysis
 exercising a ledgered defect.
+
+---
+
+## Follow-up correction (2026-08-15, R-2)
+
+Appended as a follow-up rather than an edit, per R1.
+
+§4(2) correction: results/sealed/ never existed; EXP-001/002
+magnitudes were exposed pre-sealing and live in the exposure
+ledger. Step (2) is replaced by: cite EXP-001/002 from the
+ledger as already-exposed inputs where A1/A9 require them. The
+outcome-informed scope disclosure in the header already covers
+this.
