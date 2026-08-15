@@ -73,3 +73,32 @@ git-ignored, and are attributed by their own digests instead — per-run `code_s
 sealed-input manifests, per-tree `MANIFEST.sha256`, and salted commitments for
 outcome-bearing outputs.
 
+## Anchor record
+
+| field | value |
+|---|---|
+| anchor URL | https://github.com/october25kim/no-clean-oracle |
+| first push (UTC) | 2026-08-15T05:07:57Z |
+| public HEAD | `7926c582624e6d0670926c9629bfe302e3e2ae56` |
+| public tag | `v1-pre-remediation` → object `27f5b8037e066ab58a39d7abe280e444499e861f` |
+| internal lineage | `2bf5332` (this repository) |
+| snapshot contents | 76 tracked files, single author `october25kim@users.noreply.github.com` |
+
+The first anchor target was a different repository whose name was already in use by
+another project under the same account. It was ceded rather than reclaimed: taking the
+name back would have severed GitHub's rename redirect and captured that project's
+hard-coded push URL into our public record. The R6-guard in
+`docs/g2_pin_requests.md` is the standing check that grew out of that near miss.
+
+### R6-guard baseline
+
+Reference HEAD for the equality check that precedes every future snapshot push:
+
+```
+7926c582624e6d0670926c9629bfe302e3e2ae56
+```
+
+Before the next push, the remote's HEAD must equal this value. Any other commit means a
+foreign writer reached the anchor, and the push STOPS pending a report. After each
+successful push the baseline is updated to the newly pushed HEAD in this same section.
+
