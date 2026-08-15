@@ -192,17 +192,28 @@ def random_folds(n: int, k: int, seed: int) -> np.ndarray:
 
 
 def effective_rank(feats: np.ndarray) -> float:
-    """Roy & Vetterli effective rank, with ``0 log 0 := 0`` and zero spectrum fail-closed.
+    """The REGISTERED effective rank, with spec D.5's zero-spectrum correction.
 
-    Spec D.5 pins both details. A spectrum that is exactly zero carries no distribution to
-    take an entropy of, so it returns NaN rather than a number the caller might rank.
+    The spectrum is the eigenvalue distribution of the 512x512 covariance, exactly as
+    ``scripts/b_representation_report.effective_rank`` computes it — that function defined
+    the ER selector for the G2 record and is the pin. Taking the singular values of the
+    centered data matrix instead is a different statistic, not a refactor: on real
+    penultimate features the two differ by an order of magnitude, because squaring sharpens
+    a decaying spectrum. This implementation was briefly written the other way and the
+    divergence was caught by direct comparison before any real-log execution.
+
+    One deliberate departure, from spec D.5: a spectrum that sums to zero returns NaN
+    (fail-closed) rather than 0.0. A degenerate spectrum carries no distribution to take an
+    entropy of, and returning a number the caller can rank is the same failure shape as
+    D-7. ``0 log 0 := 0`` is unchanged.
     """
     x = np.asarray(feats, dtype=np.float64)
     x = x - x.mean(axis=0, keepdims=True)
-    s = np.linalg.svd(x, compute_uv=False)
-    total = s.sum()
+    cov = (x.T @ x) / (len(x) - 1)
+    w = np.clip(np.linalg.eigvalsh(cov), 0.0, None)
+    total = w.sum()
     if total <= 0.0:
-        return float("nan")
-    p = s / total
+        return float("nan")              # spec D.5 fail-closed; registered returned 0.0
+    p = w / total
     p = p[p > 0.0]                       # 0 log 0 := 0
     return float(np.exp(-np.sum(p * np.log(p))))

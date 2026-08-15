@@ -112,5 +112,13 @@ the classification argued.
 - **status** — the corrected rule is registered in the plan. **Whether the branch ever
   fired on real data is not yet adjudicated**: it is decided in analysis A9 from the
   unsealed EXP-002 data, and §4 has not reached that step.
-- **exercised by** — no corrected analysis has run. Under the plan's reporting rules, the
-  first analysis that exercises this defect must update this entry in the same commit.
+- **exercised by** — the corrected battery on the G2-15 frame (2026-08-15,
+  `results/corrected/battery_g2.json`). Updated in that analysis's own commit, per the
+  plan's §5 rule.
+- **audit result, both sides, G2-15 frame** — the two grids are kept apart per pin 14.
+  *Historical side*: across 45 axis-instances the 120-point IQR was never exactly zero, so
+  `selection.py:31` **fired 0 times**; the smallest 120-point IQR observed was 0.02233.
+  *Corrected side*: across the same 45 axis-instances the 24-epoch IQR was never exactly
+  zero either, so the fail-closed rule excluded **0** axes. The defect is real — a zero
+  scale would have been scored as a perfect 0.0 — and on this frame it had no opportunity
+  to fire. The Tier-1 frame is audited separately and this entry gains its result there.
