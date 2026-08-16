@@ -100,13 +100,22 @@ hard-coded push URL into our public record. The R6-guard in
 | 4 | `e4e9648932e726e796111815e42ba447a21d83ca` | 2026-08-15T05:56:52Z | `9ee15ec` | R7 clarification, REPORT_24 pin batch |
 | 5 | `577c62b8f5cd93063bd5453a5dcc63bfcbbae2a5` | 2026-08-15T06:35:51Z | `52d37fe` | pin answers and plan restorations |
 | 6 | `51b11618a3d4ae700b843599441b9011a533410b` | 2026-08-15T06:38:51Z | `60fccdd` | theory_spec_v2 received and saved |
+| 7 | `cd829f3535f409ebd449eb0ee771fa03cd6042e7` | 2026-08-15T06:49:03Z | `85cff04` | corrected battery implementation, pre-execution |
+| 8 | `e2e82fba16bf4d42f3f95a74ae55a72d6c5b7d50` | 2026-08-15T07:11:22Z | `c877f62` | MILESTONE-G2 corrected battery report |
+| 9 | `773de6e6b674d946541e5302b4293f070632394a` | 2026-08-15T08:27:09Z | `153573c` | FINAL corrected battery on Tier1-36 |
+| 10 | `06517af7951b3acddf35a1d994d80779c3a8b21b` | 2026-08-15T08:44:49Z | `69ea4ac` | step-6 adjudication |
+| 11 | `988d7757c8216f4616f0aef8e605569ff9daf5b1` | 2026-08-15T09:54:18Z | `ab0b0fe` | manuscript figures and REPORT_31 |
+| 12 | `c7d98e17d3eff40774c126c52f2c440714a63bfd` | 2026-08-15T10:45:51Z | `6cdaea8` | figures v2, data tables, REPORT_32 |
+| 13 | `d02a4727911f94d550b55e2a45d85b41b7d9ffb8` | 2026-08-15T10:54:27Z | `2b8e0c2` | A9 addendum registered, pre-execution |
+| 14 | `a7b9afe40e2917aabc0b1b51f518d3a1185a6690` | 2026-08-15T10:55:59Z | `5c8164f` | A9 addendum executed, REPORT_33 |
+| 15 | `99c1b647b813cd63fea62d29109902cfdf1d1d4e` | 2026-08-15T11:07:43Z | `09a1fce` | frozen-record tables T1 and T2 |
 
 ### R6-guard baseline
 
 Reference HEAD for the equality check that precedes every future snapshot push:
 
 ```
-51b11618a3d4ae700b843599441b9011a533410b
+99c1b647b813cd63fea62d29109902cfdf1d1d4e
 ```
 
 Before the next push, the remote's HEAD must equal this value. Any other commit means a
@@ -129,3 +138,17 @@ This changes nothing about what crosses the boundary. The public history is comp
 solely of snapshot commits authored by `october25kim@users.noreply.github.com`; no
 internal commit object, parent chain, or author field is ever carried over.
 
+
+### Backfill and parity note (2026-08-16)
+
+Rows 7-15 were backfilled from the public repository's own commit log, not from memory:
+the anchor pushes happened but the table stopped being updated after row 6, and the
+R6-guard baseline in this file was left at row 6's hash while the actual public HEAD had
+moved nine pushes ahead. Every guard check in that window compared against the correct
+value, because the value was carried in the session rather than read from here — which is
+exactly the fragility R7 exists to remove. Timestamps are the public commit dates
+converted to UTC.
+
+The same review found that five internally tracked files had never reached the anchor at
+all. See `docs/defect_ledger.md`, D-8. `scripts/anchor_push.py` now performs the push and
+refuses on any file-set difference against the internal `git ls-files`.

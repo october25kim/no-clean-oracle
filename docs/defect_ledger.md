@@ -128,3 +128,30 @@ the classification argued.
   exactly zero across 108 axis-instances, so the fail-closed rule excluded **0** axes.
   Across both frames D-7 has therefore had no opportunity to fire; it remains a real
   defect, and the corrected rule remains fail-closed.
+
+### D-8 — five internally tracked files never reached the public anchor
+
+- **found** — 2026-08-16, on resuming after a reboot, by comparing the public tracked tree
+  against the internal one digest-for-digest. Anchors 1–15 are all affected.
+- **defect** — the snapshot procedure extracted `git archive HEAD` into a fresh repository
+  and staged it with `git add -A`. A fresh repository re-applies `.gitignore` to paths that
+  are untracked *there*, and two project rules matched files the internal repository
+  tracks: `results/` matched `results/cifar_n_masks/MANIFEST.json`, and `data/` matched
+  `src/data/__init__.py`, `datasets.py`, `noise.py` and `ood_pools.py` — a bare `data/`
+  pattern matches a directory of that name at any depth, not only at the root. Internally
+  those files are exempt because tracking predates the rule; in the snapshot they were
+  simply dropped.
+- **impact** — the public anchor was missing four source modules and the CIFAR-N manifest,
+  the file the README points at for dataset provenance. Every file that *did* cross was
+  byte-identical to the internal copy, so nothing published was wrong; what was published
+  was incomplete, and an anchor that does not reproduce the code that ran fails at the one
+  thing it exists to do. No analysis result is affected: all analyses ran against the
+  internal tree.
+- **corrected rule** — `scripts/anchor_push.py` performs the push. It stages with
+  `git add -A -f` so an ignore rule cannot drop a tracked file, and then enforces
+  **file-set parity** against the internal `git ls-files`, refusing to push on any
+  difference in either direction. The force-add fixes this cause; the parity check is what
+  catches the next one.
+- **status** — fixed and re-anchored on 2026-08-16. Anchors 1–15 remain in the public
+  history as they were pushed; they are not rewritten, and this entry is the record of what
+  they omitted.

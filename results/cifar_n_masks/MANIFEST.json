@@ -1,0 +1,67 @@
+{
+  "source_repo": "https://github.com/UCSC-REAL/cifar-10-100n",
+  "source_branch": "main",
+  "source_urls": {
+    "CIFAR-10_human.pt": "https://raw.githubusercontent.com/UCSC-REAL/cifar-10-100n/main/data/CIFAR-10_human.pt",
+    "CIFAR-100_human.pt": "https://raw.githubusercontent.com/UCSC-REAL/cifar-10-100n/main/data/CIFAR-100_human.pt",
+    "side_info_cifar10N.csv": "https://raw.githubusercontent.com/UCSC-REAL/cifar-10-100n/main/side_info_cifar10N.csv",
+    "side_info_cifar100N.csv": "https://raw.githubusercontent.com/UCSC-REAL/cifar-10-100n/main/side_info_cifar100N.csv"
+  },
+  "source_file_sha256": {
+    "CIFAR-10_human.pt": "873e69c39cb9b5e97fb6bae2d60bb59b38a5cbc31d2b868f7903dcb2b9dd2310",
+    "CIFAR-100_human.pt": "bd2d80409754d420292d622e15e25248ba21e37d27429efac49c8da723f44394",
+    "side_info_cifar10N.csv": "50fcbe619a003d0b804a20ece51447dcdb48978c60e1202371d08302b2e14351",
+    "side_info_cifar100N.csv": "22b9ca66e25a9c0663ddc415ea3a5b9063f30d434d802ccbd0f0bf3d532d19a9"
+  },
+  "splits": {
+    "c10n_worst": {
+      "dataset": "cifar10",
+      "source_file": "CIFAR-10_human.pt",
+      "source_key": "worse_label",
+      "n": 50000,
+      "n_classes": 10,
+      "measured_noise_rate_pct": 40.208,
+      "target_noise_rate_pct": 40.21,
+      "deviation_pp": 0.002,
+      "within_tolerance_0p1pp": true,
+      "clean_matches_torchvision": true,
+      "n_flipped": 20104,
+      "npz_sha256": "9f1d34ccf54e19a7a7ff47ccfcf496aa5bc284e8e907438a57fae572399330fc",
+      "noisy_labels_sha256": "a64d887522cf6d8f4966912a1536ea2d890600929a8465a7f307cdca2501847b",
+      "mask_sha256": "0a7dc7a324668034b38fd33b599517b359e13737b6410d535e60ddd0457fba0a"
+    },
+    "c10n_random1": {
+      "dataset": "cifar10",
+      "source_file": "CIFAR-10_human.pt",
+      "source_key": "random_label1",
+      "n": 50000,
+      "n_classes": 10,
+      "measured_noise_rate_pct": 17.234,
+      "target_noise_rate_pct": 17.23,
+      "deviation_pp": 0.004,
+      "within_tolerance_0p1pp": true,
+      "clean_matches_torchvision": true,
+      "n_flipped": 8617,
+      "npz_sha256": "bc7ec5b6e039622a8ae4895f5284f5101e63496b52ab749dc0c2749019189c37",
+      "noisy_labels_sha256": "b5dc9007ae247a48ce267bec37a1310b0cd65ed73801ca7e595fb954902575a7",
+      "mask_sha256": "3c43825599c89006cc30471ec92c87eb7f471c3805723c6945d9c89f7a0f70f8"
+    },
+    "c100n": {
+      "dataset": "cifar100",
+      "source_file": "CIFAR-100_human.pt",
+      "source_key": "noisy_label",
+      "n": 50000,
+      "n_classes": 100,
+      "measured_noise_rate_pct": 40.2,
+      "target_noise_rate_pct": 40.2,
+      "deviation_pp": 0.0,
+      "within_tolerance_0p1pp": true,
+      "clean_matches_torchvision": true,
+      "n_flipped": 20100,
+      "npz_sha256": "585c1ceeb081ee7d352cedb1503127775a3e9211a1a8ebdb5b252138fc87278e",
+      "noisy_labels_sha256": "4a1efd5da7a214b299cf6ac0bafe3f0d48c065b7aa2d40aa185d4711714bb311",
+      "mask_sha256": "fc91f78eeb1c757e9b33398deb80779e27c1b471a205c52187263b26e2a7a6a6"
+    }
+  },
+  "all_validations_passed": true
+}
