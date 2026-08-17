@@ -181,3 +181,83 @@ Filed alongside D-8; found in the same 2026-08-16 review.
 - **verification** — the corrected push ran through `anchor_push.py`, which read
   `99c1b647…` from the file, matched it against the live remote HEAD, and only then
   proceeded. The baseline now reads `4c56d2c9…` and row 16 is recorded.
+
+### D-9 — both wave-1 recon runs executed on GPU 0, not the two GPUs the launch specified
+
+- **found** — 2026-08-17, on inspecting the exited wave-1 containers before launching
+  wave 2. Classification: **[EXPLORATORY-UNVERIFIED-PROVENANCE]**; no registered artifact
+  is affected, because the recon is barred from registered artifacts by construction.
+- **defect** — `recon_c1m.py` selected its device with a bare `dev = "cuda"`, and the launch
+  passed `NVIDIA_VISIBLE_DEVICES=all` with no per-container pin and no
+  `CUDA_VISIBLE_DEVICES`. `"cuda"` is device 0 whenever the environment does not say
+  otherwise, so both containers took GPU 0 together. The owner's coexistence override
+  authorised two GPUs; the launch was written as though `--gpus` had been passed per
+  container, and it had not. `meta.json` recorded `cuda_visible: ""`, which is consistent
+  with the defect but does not name the device actually used — a bare `"cuda"` leaves no
+  record of what it resolved to.
+- **impact** — none on the training. Both runs completed 20 epochs with 20 checkpoints,
+  seeded and deterministic, and device placement does not enter the design. Two effects on
+  the record: (i) the per-epoch walls of 1151 s (CE) and 1197 s (ELR) are two ResNet-50 runs
+  over 1M images time-slicing one GPU that also carried a Fed-CORE job, so the 12.8 h
+  projection that broke the approved 5–8 h cost premise was a placement artifact and not the
+  intrinsic cost of the design; (ii) the R7 report cannot carry a GPU 1 vs GPU 3 contention
+  asymmetry for wave 1, because neither run was on GPU 1 or GPU 3. Wave 1 is **not** being
+  re-run: the artifacts are correct and a re-run would buy a different wall-clock, not a
+  different result.
+- **corrected rule** — `recon_c1m.py` takes `--gpu`, calls `torch.cuda.set_device`, fails
+  closed on an out-of-range index, and writes `device`, `device_index` and `device_name`
+  into `meta.json`. `scripts/launch_recon_wave2.sh` passes `--gpus "device=N"` so each
+  container sees exactly one GPU, and prints both the host index and the container-local
+  index so the two cannot be conflated in a report.
+- **verification** — wave 2 launched 2026-08-17 on host GPUs 1 and 3; GPU memory rose from
+  5846 to 8498 MiB and from 5829 to 8737 MiB against an unchanged GPU 0 and GPU 2, and both
+  devices report 100% utilisation. Fed-CORE's four containers were not touched.
+
+### D-10 — the recon containers held a read-write bind on the Fed-CORE data tree
+
+- **found** — 2026-08-17, same inspection as D-9.
+- **defect** — the wave-1 containers mounted `/data/workspace/sanghoon/fedcore2/data` with
+  `RW=true`, inherited from the registered-track launcher template where CIFAR-N data is a
+  genuine input. The standing constraint on that tree is **read-only**.
+- **impact** — none. `recon_c1m.py` contains no reference to `fedcore2`, and no file under
+  that tree has an mtime later than 2026-08-11, well before the 2026-08-17 launch. The
+  constraint held in fact; it held because of what the script happens to do rather than
+  because of what the mount permits, and those are different guarantees. A future edit to
+  the recon script would have been free to write there with nothing objecting.
+- **corrected rule** — the recon needs no Fed-CORE data, so `launch_recon_wave2.sh` does not
+  mount that tree at all. Where a Fed-CORE mount is genuinely required it is to be bound
+  `:ro`; removing the mount is preferred to trusting the flag.
+- **verification** — wave 2's containers show no `fedcore2` mount, and the tree's newest
+  mtime remains 2026-08-11.
+
+### D-11 — a patch that matched nothing reported success
+
+- **found** — 2026-08-17, when both wave-2 containers died within seconds on
+  `TypeError: train_one() takes 3 positional arguments but 4 were given`.
+- **defect** — the D-9 fix was applied as six `str.replace` calls. Five matched; the one
+  adding the `gpu` parameter targeted `batch: int = BATCH` where the source reads
+  `batch: int`, so it matched nothing. `str.replace` with no match returns the string
+  unchanged and says nothing. The verification that followed grepped for the five strings
+  that had landed, so a five-of-six application read as complete.
+- **impact** — none beyond a few seconds of container startup; the runs failed before
+  reaching a GPU. It is the same shape as the 0-byte `TERMINAL.json` it was fixing: a check
+  that confirms what is present and never asks what is missing.
+- **corrected rule** — patches assert their match count before writing, and verification
+  walks the AST to compare `train_one`'s arity against its call site rather than grepping
+  for strings the patch itself just inserted.
+
+### D-12 — a runtime flag was lost when the launch was rewritten rather than reused
+
+- **found** — 2026-08-17, when the wave-2 containers reached the first epoch and their
+  DataLoader workers were killed by bus errors.
+- **defect** — wave 1 ran with `--shm-size=16g`; `launch_recon_wave2.sh` was written fresh
+  and omitted it, so Docker's 64 MB default applied. Runtime flags leave no trace in the
+  script they launch, which is precisely what makes them go missing when a launch is retyped
+  instead of reused, and the failure surfaces at the first batch rather than at launch.
+- **impact** — none on results; no epoch completed under the wrong setting.
+- **corrected rule** — the launcher sets `--shm-size=16g` and then compares its own
+  containers against the still-present wave-1 container `recon_ce_s0` with
+  `docker inspect`, tearing down on any mismatch. The reference is read from the artifact
+  rather than restated as a number, so the two waves cannot drift apart.
+- **verification** — both wave-2 containers report shm parity with wave 1 at 17179869184
+  bytes and passed the first epoch.
