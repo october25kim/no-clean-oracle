@@ -121,13 +121,14 @@ hard-coded push URL into our public record. The R6-guard in
 | 25 | `af4e983ae0f75aaa200045ba5f765eb8f1f76902` | 2026-08-17T12:28:25Z | `0bfa916` | T11 estimand pin, pre-execution |
 | 26 | `5c0da2bf4f95237288e4a96a4ec71a2da6c92228` | 2026-08-17T14:14:43Z | `1845f2a` | recon wave-1 exit fixes (D-9, D-10) and wave-2 launch |
 | 27 | `ca06fbeb567d7e089eac155333dc2b34af0bc0ef` | 2026-08-17T14:15:50Z | `811ad38` | defect ledger D-9 through D-12 |
+| 28 | `1f394295bd75c2aed1a068807ef52f0428314986` | 2026-08-17T14:34:01Z | `d3f8a69` | D-9 withdrawn |
 
 ### R6-guard baseline
 
 Reference HEAD for the equality check that precedes every future snapshot push:
 
 ```
-ca06fbeb567d7e089eac155333dc2b34af0bc0ef
+1f394295bd75c2aed1a068807ef52f0428314986
 ```
 
 Before the next push, the remote's HEAD must equal this value. Any other commit means a
