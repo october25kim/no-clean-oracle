@@ -112,13 +112,14 @@ hard-coded push URL into our public record. The R6-guard in
 | 16 | `4c56d2c9540957f64b9c2c0243073c79585fe155` | 2026-08-16T03:5x:00Z | `9365900` | restore the five files the old procedure dropped (D-8) |
 | 17 | `174c1e8ff5b0b24fed09be17ee1634ca9d45f71c` | 2026-08-16T04:0x:00Z | `b9660c7` | D-8b, D-8 verification, A10b DROP and Tier 2 dates |
 | 18 | `17668d9055d0bd21f32aa89ed53a6c7e631fbcf2` | 2026-08-17T07:2x:00Z | `8722234` | exploratory manifest and hygiene-guard extension |
+| 19 | `5d7449f960929908cd61b5dca5cf88bbbab63ccf` | 2026-08-17T07:3x:00Z | `a183116` | untrack macOS artifacts; record push 18 |
 
 ### R6-guard baseline
 
 Reference HEAD for the equality check that precedes every future snapshot push:
 
 ```
-17668d9055d0bd21f32aa89ed53a6c7e631fbcf2
+5d7449f960929908cd61b5dca5cf88bbbab63ccf
 ```
 
 Before the next push, the remote's HEAD must equal this value. Any other commit means a
