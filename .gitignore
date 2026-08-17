@@ -22,3 +22,7 @@ __pycache__/
 # results/cifar_n_masks/MANIFEST.json
 data/
 .hypothesis/
+
+# macOS filesystem noise
+.DS_Store
+._*
