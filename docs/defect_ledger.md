@@ -182,36 +182,49 @@ Filed alongside D-8; found in the same 2026-08-16 review.
   `99c1b647…` from the file, matched it against the live remote HEAD, and only then
   proceeded. The baseline now reads `4c56d2c9…` and row 16 is recorded.
 
-### D-9 — both wave-1 recon runs executed on GPU 0, not the two GPUs the launch specified
+### D-9 — WITHDRAWN 2026-08-17. The claim was false; wave 1 was correctly placed.
 
-- **found** — 2026-08-17, on inspecting the exited wave-1 containers before launching
-  wave 2. Classification: **[EXPLORATORY-UNVERIFIED-PROVENANCE]**; no registered artifact
-  is affected, because the recon is barred from registered artifacts by construction.
-- **defect** — `recon_c1m.py` selected its device with a bare `dev = "cuda"`, and the launch
-  passed `NVIDIA_VISIBLE_DEVICES=all` with no per-container pin and no
-  `CUDA_VISIBLE_DEVICES`. `"cuda"` is device 0 whenever the environment does not say
-  otherwise, so both containers took GPU 0 together. The owner's coexistence override
-  authorised two GPUs; the launch was written as though `--gpus` had been passed per
-  container, and it had not. `meta.json` recorded `cuda_visible: ""`, which is consistent
-  with the defect but does not name the device actually used — a bare `"cuda"` leaves no
-  record of what it resolved to.
-- **impact** — none on the training. Both runs completed 20 epochs with 20 checkpoints,
-  seeded and deterministic, and device placement does not enter the design. Two effects on
-  the record: (i) the per-epoch walls of 1151 s (CE) and 1197 s (ELR) are two ResNet-50 runs
-  over 1M images time-slicing one GPU that also carried a Fed-CORE job, so the 12.8 h
-  projection that broke the approved 5–8 h cost premise was a placement artifact and not the
-  intrinsic cost of the design; (ii) the R7 report cannot carry a GPU 1 vs GPU 3 contention
-  asymmetry for wave 1, because neither run was on GPU 1 or GPU 3. Wave 1 is **not** being
-  re-run: the artifacts are correct and a re-run would buy a different wall-clock, not a
-  different result.
-- **corrected rule** — `recon_c1m.py` takes `--gpu`, calls `torch.cuda.set_device`, fails
-  closed on an out-of-range index, and writes `device`, `device_index` and `device_name`
-  into `meta.json`. `scripts/launch_recon_wave2.sh` passes `--gpus "device=N"` so each
-  container sees exactly one GPU, and prints both the host index and the container-local
-  index so the two cannot be conflated in a report.
-- **verification** — wave 2 launched 2026-08-17 on host GPUs 1 and 3; GPU memory rose from
-  5846 to 8498 MiB and from 5829 to 8737 MiB against an unchanged GPU 0 and GPU 2, and both
-  devices report 100% utilisation. Fed-CORE's four containers were not touched.
+**This entry asserted a defect that did not exist. It is kept, struck, because a ledger that
+deletes its own errors cannot be audited.**
+
+- **what it claimed** — that both wave-1 containers ran on GPU 0, contrary to the approved
+  two-GPU coexistence override, and that the 12.8 h cost projection was therefore a
+  placement artifact rather than the intrinsic cost of the design.
+- **what is actually true** — each wave-1 container was pinned to exactly one GPU by UUID:
+  `recon_ce_s0` to `GPU-94b3a414-…` = **GPU 1**, `recon_elr_s0` to `GPU-afbc9e02-…` =
+  **GPU 3**. The placement matched the override exactly. `docker inspect` on
+  `.HostConfig.DeviceRequests` shows the pins, and `nvidia-smi --query-gpu=index,uuid`
+  resolves both UUIDs to indices 1 and 3.
+- **how the false claim was reached** — the source line `dev = "cuda"` and the recorded
+  `cuda_visible: ""` are both real, and together they look like an unpinned run. They are
+  not: `--gpus "device=<uuid>"` exposes exactly one GPU to the container, which then sees it
+  as local index 0, so a bare `"cuda"` resolves to the single pinned device and
+  `CUDA_VISIBLE_DEVICES` is legitimately empty. The check that should have caught this
+  piped `.HostConfig.DeviceRequests` through `grep -o '\[\["[0-9]*"\]\]'`, a pattern that
+  matches a numeric device ID and not the UUID form that was actually present. The grep
+  returned nothing and **the absence of a match was read as the absence of a device
+  request.** That is the identical failure recorded below as D-11 — a check that confirms
+  what it expected to find and never asks whether it was looking for the right thing —
+  committed while writing up D-11.
+- **consequences of the retraction**
+  - The **12.8 h projection is the intrinsic cost of the design**, measured under correct
+    placement. The original cost escalation was right; the explanation later attached to it
+    was wrong. Direct evidence: wave 2, on the same GPUs 1 and 3 with one run each, spent
+    **1155 s** on its first CE epoch against wave 1's 1151.3 s mean. Separating nothing that
+    was ever shared changed nothing.
+  - The **GPU 1 vs GPU 3 comparison is available** for wave 1 after all: 1151.3 s/epoch on
+    GPU 1 and 1197.0 s/epoch on GPU 3. It does **not** isolate a contention asymmetry,
+    because learner and GPU are confounded — CE ran on GPU 1 and ELR on GPU 3 in both waves,
+    and ELR does strictly more work per step. The R7 report must state the 3.97% gap as
+    learner-and-device confounded, not as a device effect.
+  - `recon_c1m.py`'s `--gpu` flag, the range check and the `device`/`device_index`/
+    `device_name` fields in `meta.json` are **retained as instrumentation, not as a fix**.
+    They are worth keeping for the reason the false claim was possible at all: the artifact
+    could not previously answer which device it ran on, so the question had to be put to the
+    launcher, and the launcher was read wrong.
+- **status** — withdrawn. No wave-1 artifact was affected by the claim, and nothing was
+  re-run on account of it. The wave-2 relaunch it triggered is harmless: wave 2 sits on
+  GPUs 1 and 3, the same placement wave 1 had.
 
 ### D-10 — the recon containers held a read-write bind on the Fed-CORE data tree
 

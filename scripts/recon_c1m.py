@@ -257,13 +257,14 @@ def train_one(learner: str, seed: int, batch: int, gpu: int | None = None) -> di
     run_id = f"c1m_{learner}_seed{seed}"
     run_dir = os.path.join(OUT, run_id)
     os.makedirs(run_dir, exist_ok=True)
-    # Wave 1 used a bare "cuda", which is device 0 whenever CUDA_VISIBLE_DEVICES is unset.
-    # Both containers were launched with NVIDIA_VISIBLE_DEVICES=all and no per-container
-    # pin, so both landed on GPU 0 together instead of the two GPUs the launch called for.
-    # Nothing about the training was wrong, but the placement was not the placement that
-    # was approved, and a bare "cuda" cannot record which GPU it chose. Pin explicitly,
-    # fail closed on a bad index, and write the resolved device into meta so the artifact
-    # answers the question instead of the launcher being trusted to have done the right thing.
+    # A bare "cuda" is device 0 of whatever the container can see, which under
+    # --gpus "device=<uuid>" is the single pinned GPU -- so wave 1's bare "cuda" was correct
+    # and its empty CUDA_VISIBLE_DEVICES was expected. That combination nonetheless reads
+    # exactly like an unpinned run, and it was misread as one (defect ledger D-9, withdrawn):
+    # the artifact could not say which device it used, so the question went to the launcher
+    # instead, and the launcher was read wrong. This is instrumentation, not a fix. Pin when
+    # asked, fail closed on a bad index, and write the resolved device into meta so the
+    # artifact answers the placement question itself.
     if gpu is not None:
         n_dev = torch.cuda.device_count()
         if not 0 <= gpu < n_dev:

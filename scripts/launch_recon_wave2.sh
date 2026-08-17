@@ -6,10 +6,11 @@
 #
 # Two corrections to the wave-1 launch are encoded here rather than remembered:
 #
-#   1. Explicit device pins.  Wave 1 passed NVIDIA_VISIBLE_DEVICES=all with no per-container
-#      pin and the script asked for a bare "cuda", so both containers ran on GPU 0 together
-#      instead of the two GPUs the approved launch called for.  Each container now sees
-#      exactly one GPU and the run records which one it resolved to.
+#   1. Explicit device pins -- instrumentation, NOT a correction.  Wave 1 was already pinned
+#      one GPU per container by UUID (CE on GPU 1, ELR on GPU 3), exactly as approved; the
+#      claim that it ran both on GPU 0 was wrong and is withdrawn as D-9.  What wave 1 could
+#      not do was say so from its own artifacts, which is why the misreading was possible.
+#      Each container still sees exactly one GPU, and the run now records which one.
 #
 #   2. No fedcore2 mount.  Wave 1 inherited /data/workspace/sanghoon/fedcore2/data as a
 #      READ-WRITE bind from the registered-track template.  recon_c1m.py contains no
