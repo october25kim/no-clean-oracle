@@ -53,6 +53,33 @@ def recorded_baseline() -> str:
     return m.group(1)
 
 
+def record_push(public: str, internal: str, subject: str) -> None:
+    """Append the push row and advance the baseline, in the file, immediately.
+
+    This used to be a printed reminder to do it by hand, and the hand step was missed
+    after the T-EMIT-3 registration push: the baseline sat one push behind and the guard
+    refused the next attempt. The guard doing that is the fix working — D-8b made staleness
+    loud instead of silent — but the reminder was the wrong mechanism, because a step that
+    only a human remembers is a step that eventually is not taken. The row lands in the
+    working tree and rides the following snapshot, which is the same one-push lag the
+    manual version had, minus the forgetting.
+    """
+    txt = open(CHAIN).read()
+    rows = re.findall(r"^\| (\d+) \| `[0-9a-f]{40}`", txt, re.M)
+    n = max(int(x) for x in rows) + 1 if rows else 1
+    stamp = subprocess.run(["date", "-u", "+%Y-%m-%dT%H:%M:%SZ"],
+                           text=True, capture_output=True).stdout.strip()
+    subj = subject.replace("Anchor snapshot: ", "").strip()
+    last = sorted(((int(m.group(1)), m.group(0)) for m in
+                   re.finditer(r"^\| \d+ \| `[0-9a-f]{40}` \|.*$", txt, re.M)),
+                  key=lambda t: t[0])[-1][1]
+    txt = txt.replace(last, f"{last}\n| {n} | `{public}` | {stamp} | `{internal[:7]}` | {subj} |")
+    txt = re.sub(r"(R6-guard baseline.*?```\s*)[0-9a-f]{40}(\s*```)",
+                 rf"\g<1>{public}\g<2>", txt, flags=re.S)
+    open(CHAIN, "w").write(txt)
+    print(f"[anchor] ANCHOR_CHAIN row {n} recorded; baseline advanced to {public}")
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--message", required=True, help="snapshot commit subject")
@@ -114,7 +141,7 @@ def main(argv=None) -> int:
     run(["git", "-C", a.work, "push", "-q", "origin", "master"])
     new = run(["git", "-C", a.work, "rev-parse", "HEAD"])
     print(f"[anchor] pushed. new public HEAD {new}")
-    print(f"[anchor] record in ANCHOR_CHAIN.md and advance the baseline to {new}")
+    record_push(new, internal, a.message)
     return 0
 
 
