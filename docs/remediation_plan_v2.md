@@ -178,3 +178,51 @@ Clothing1M resend due 2026-08-20; lapse ruling 2026-08-27. The
 gate is otherwise unchanged: OOD-far pin, officially obtained
 data, and a separate instruction. No external archive has been
 contacted at any point.
+
+## T-EMIT-3 REGISTRATION (2026-08-17, register-then-execute)
+
+Registered before computation, appended per R1. Six descriptive
+emissions, tagged [CORRECTED-DESCRIPTIVE]. Two classes, kept
+apart because they differ in kind:
+
+**Transcription-class** — read from artifacts already committed,
+no new estimand.
+T9  per-run J_s and eta_s = J_s - rho*_LE for all four
+    selectors, both frames, plus raw-unit regrets at the minimax
+    checkpoint (dID, dWC in points; dAUROC) with the 24-epoch IQR
+    denominators. Sources: A4.selectors.*, A1.axes.*.{delta_raw,d,ghat}.
+T12 grid-density sensitivity from the stored 120-point curves in
+    the run logs: rho*, |F_delta| and class on the T_1/T_2/T_5/T_10
+    subgrids with the denominator FIXED on the master 120-grid, so
+    only the candidate set varies and the scale does not.
+T13 complete OOD axis specification: direction, tie rule, per-pool
+    n, macro vs pooled, temperature, primary vs sensitivity pools,
+    per-pool oracle epochs. Documentation of what already ran.
+T14 cell-level table, 12 cells x 3 seeds: per-cell class counts,
+    LOSO stability flag, learner and noise margins.
+
+**New-estimand class** — these are NOT transcription and are
+registered as such. Both need the stored per-sample logits
+(1,224 forward checkpoints), not the battery summaries.
+T10 WC refit under a proposal/assessment split of the clean test
+    set (or K-fold cross-fit if class sizes forbid a single split):
+    re-derive the WC class set on the proposal half, then the WC
+    oracle, IQR, rho*_LE and taxonomy at delta = 0.10 on the
+    assessment half. Reports class-agreement with the registered
+    subset and the taxonomy deltas. This tests whether the WC axis
+    is an artifact of choosing its classes on the same data it is
+    scored on.
+T11 joint paired bootstrap: ID indices shared across axes and
+    checkpoints so their correlation is preserved, pools resampled
+    independently; yields P_boot(rho*_LE > delta) per run, the
+    certified counts F_cert and F_poss, and a cross-fitted taxonomy
+    variant. Certificate robustness (T6 under bootstrap,
+    aggregation and delta) folds in here.
+
+Ordering: recon has priority for compute. T9/T12/T13/T14 run in
+wall-time gaps; T10/T11 run after recon completes, because they
+are CPU-heavy enough to contend with its dataloaders.
+
+Like the A9 addendum, none of this can alter the anchored step-6
+adjudication, which stands on the registered primary analysis.
+Outputs are published whichever way they come out.
