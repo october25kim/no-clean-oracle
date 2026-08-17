@@ -1,0 +1,28 @@
+{
+ "schema": "exploratory_manifest.v1",
+ "classification": "EXPLORATORY-UNVERIFIED-PROVENANCE",
+ "clause_verbatim": "third-party re-upload; official distribution requires an agreement form; no official checksum exists; contents unverifiable against the canonical release.",
+ "scope": "Entries under data/exploratory/** are exploratory-class. They are NOT Tier 2 and NOT registered inputs. Nothing derived from them may enter a registered artifact, a paper claim, or be pooled with any registered result. This manifest exists so that their presence cannot hard-block a registered launch: exploration must never gate the registered track.",
+ "not_a_seal": "This is not a seal. A seal attests that bytes came from a known source; this attests only that the bytes have not changed since they were recorded, which is the strongest claim available for material whose origin is unknown.",
+ "recorded": "2026-08-17",
+ "entries": {
+  "data/exploratory/clothing1m_kaggle/clothing1m.npz": {
+   "kind": "data",
+   "sha256": "5187153e65663d1b8a21816773d2fbe635029e2c89a64e860af5384a4d8ac305",
+   "bytes": 12296000614,
+   "mtime_utc": "2024-08-11T23:32:00Z"
+  },
+  "data/exploratory/clothing1m_kaggle/clothing10k_test.npz": {
+   "kind": "data",
+   "sha256": "240b5dcfd08d8a30aec025289905dd1864537102e4e7287d5bf30837c5b88267",
+   "bytes": 129428202,
+   "mtime_utc": "2024-08-11T23:32:00Z"
+  },
+  "data/exploratory/clothing1m_kaggle/PROVENANCE.md": {
+   "kind": "record",
+   "sha256": "bb78212cfa22096974897a2a241b25607d56f39591a84df86c0a8bff2282462f",
+   "bytes": 3824,
+   "mtime_utc": "2026-08-17T06:43:04Z"
+  }
+ }
+}

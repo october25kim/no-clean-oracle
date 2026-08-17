@@ -110,13 +110,14 @@ hard-coded push URL into our public record. The R6-guard in
 | 14 | `a7b9afe40e2917aabc0b1b51f518d3a1185a6690` | 2026-08-15T10:55:59Z | `5c8164f` | A9 addendum executed, REPORT_33 |
 | 15 | `99c1b647b813cd63fea62d29109902cfdf1d1d4e` | 2026-08-15T11:07:43Z | `09a1fce` | frozen-record tables T1 and T2 |
 | 16 | `4c56d2c9540957f64b9c2c0243073c79585fe155` | 2026-08-16T03:5x:00Z | `9365900` | restore the five files the old procedure dropped (D-8) |
+| 17 | `174c1e8ff5b0b24fed09be17ee1634ca9d45f71c` | 2026-08-16T04:0x:00Z | `b9660c7` | D-8b, D-8 verification, A10b DROP and Tier 2 dates |
 
 ### R6-guard baseline
 
 Reference HEAD for the equality check that precedes every future snapshot push:
 
 ```
-4c56d2c9540957f64b9c2c0243073c79585fe155
+174c1e8ff5b0b24fed09be17ee1634ca9d45f71c
 ```
 
 Before the next push, the remote's HEAD must equal this value. Any other commit means a
