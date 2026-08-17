@@ -118,13 +118,14 @@ hard-coded push URL into our public record. The R6-guard in
 | 22 | `f2f866b17f39a4fcf6191265737faeac85e58bb1` | 2026-08-17T10:0x:00Z | `0e54776` | T-EMIT-3 transcription half and self-recording anchor |
 | 23 | `8c2228c1191eb34fb22c1b99db0c3c5f73107141` | 2026-08-17T09:42:56Z | `49d8fc6` | self-recording anchor fix |
 | 24 | `0570293f7af85ebd91ec25fa148f0fb2694979da` | 2026-08-17T10:57:35Z | `ac05d1a` | F3 defect fix with assertions, F4/F5 deltas, T15, T16 |
+| 25 | `af4e983ae0f75aaa200045ba5f765eb8f1f76902` | 2026-08-17T12:28:25Z | `0bfa916` | T11 estimand pin, pre-execution |
 
 ### R6-guard baseline
 
 Reference HEAD for the equality check that precedes every future snapshot push:
 
 ```
-0570293f7af85ebd91ec25fa148f0fb2694979da
+af4e983ae0f75aaa200045ba5f765eb8f1f76902
 ```
 
 Before the next push, the remote's HEAD must equal this value. Any other commit means a

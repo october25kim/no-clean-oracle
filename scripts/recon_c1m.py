@@ -238,7 +238,7 @@ def extract_train_images() -> str:
     return TRAIN_NPY
 
 
-def train_one(learner: str, seed: int, batch: int) -> dict:
+def train_one(learner: str, seed: int, batch: int, gpu: int | None = None) -> dict:
     import torch
     import torch.nn.functional as F
     from torch.utils.data import DataLoader, Dataset
@@ -257,7 +257,23 @@ def train_one(learner: str, seed: int, batch: int) -> dict:
     run_id = f"c1m_{learner}_seed{seed}"
     run_dir = os.path.join(OUT, run_id)
     os.makedirs(run_dir, exist_ok=True)
-    dev = "cuda"
+    # Wave 1 used a bare "cuda", which is device 0 whenever CUDA_VISIBLE_DEVICES is unset.
+    # Both containers were launched with NVIDIA_VISIBLE_DEVICES=all and no per-container
+    # pin, so both landed on GPU 0 together instead of the two GPUs the launch called for.
+    # Nothing about the training was wrong, but the placement was not the placement that
+    # was approved, and a bare "cuda" cannot record which GPU it chose. Pin explicitly,
+    # fail closed on a bad index, and write the resolved device into meta so the artifact
+    # answers the question instead of the launcher being trusted to have done the right thing.
+    if gpu is not None:
+        n_dev = torch.cuda.device_count()
+        if not 0 <= gpu < n_dev:
+            raise SystemExit(f"--gpu {gpu} out of range; {n_dev} CUDA device(s) visible")
+        torch.cuda.set_device(gpu)
+        dev = f"cuda:{gpu}"
+    else:
+        dev = "cuda"
+    dev_index = torch.cuda.current_device()
+    dev_name = torch.cuda.get_device_name(dev_index)
 
     extract_train_images()
     x = np.load(TRAIN_NPY, mmap_mode="r")
@@ -303,6 +319,7 @@ def train_one(learner: str, seed: int, batch: int) -> dict:
                 n_train=int(len(ytr)), n_classes=N_CLASSES,
                 torch=torch.__version__, cuda=torch.version.cuda,
                 cuda_visible=os.environ.get("CUDA_VISIBLE_DEVICES", ""),
+                device=dev, device_index=dev_index, device_name=dev_name,
                 code_stamp=code_stamp())
     with open(os.path.join(run_dir, "meta.json"), "w") as fh:
         json.dump(meta, fh, indent=1)
@@ -330,9 +347,18 @@ def train_one(learner: str, seed: int, batch: int) -> dict:
         print(f"[recon] {run_id} ep{ep:03d} loss {rec['train_loss']:.4f} "
               f"{rec['seconds']:.0f}s", flush=True)
 
-    with open(os.path.join(run_dir, "TERMINAL.json"), "w") as fh:
-        json.dump(dict(status="completed", epochs=EPOCHS, classification=TAG,
-                       wall_seconds=round(time.time() - t0, 1), **meta), fh, indent=1)
+    # meta already carries `classification`, so splatting it beside an explicit
+    # classification= raised TypeError -- after 20 epochs, with every checkpoint on disk.
+    # Worse, `with open(...)` had already created the file, so a 0-byte TERMINAL.json sat
+    # there looking present to any existence check. Build the payload FIRST, open only to
+    # write it, and never re-pass a key meta owns.
+    payload = dict(meta)
+    payload.update(status="completed", epochs=EPOCHS,
+                   wall_seconds=round(time.time() - t0, 1))
+    tmp = os.path.join(run_dir, "TERMINAL.json.tmp")
+    with open(tmp, "w") as fh:
+        json.dump(payload, fh, indent=1)
+    os.replace(tmp, os.path.join(run_dir, "TERMINAL.json"))
     return meta
 
 
@@ -343,13 +369,15 @@ def main(argv=None) -> int:
     p.add_argument("--learner", choices=["ce", "elr"])
     p.add_argument("--seed", type=int)
     p.add_argument("--batch", type=int, default=BATCH)
+    p.add_argument("--gpu", type=int, default=None,
+                   help="CUDA device index to pin; omit only to reproduce wave 1's default")
     a = p.parse_args(argv)
     os.makedirs(OUT, exist_ok=True)
     if a.inspect:
         return inspect()
     if a.learner is None or a.seed is None:
         raise SystemExit("need --learner and --seed (or --inspect)")
-    train_one(a.learner, a.seed, a.batch)
+    train_one(a.learner, a.seed, a.batch, a.gpu)
     return 0
 
 
