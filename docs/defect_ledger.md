@@ -286,3 +286,27 @@ deletes its own errors cannot be audited.**
   rather than restated as a number, so the two waves cannot drift apart.
 - **verification** — both wave-2 containers report shm parity with wave 1 at 17179869184
   bytes and passed the first epoch.
+
+### D-13 — a completion record that existed and was empty
+
+- **found** — 2026-08-17, when both wave-1 recon containers exited 1 after completing all 20
+  epochs. Classification: **[EXPLORATORY-UNVERIFIED-PROVENANCE]**.
+- **defect** — `train_one` wrote its terminal record as
+  `json.dump(dict(status=..., classification=TAG, **meta), fh)`, and `meta` already carries
+  `classification`. The duplicate keyword raised `TypeError` while the argument was being
+  built — after every epoch had run and every checkpoint was on disk. Because the call sat
+  inside `with open(path, "w") as fh:`, the file had already been created when the exception
+  fired, so what remained was a **0-byte `TERMINAL.json`**: present to any existence check,
+  empty to any reader. `os.path.isfile` returns True for it.
+- **impact** — no training was lost. Both runs kept 20 checkpoints, 20 metrics lines and
+  their `meta.json`. What was lost was the record that says the run finished, in a form that
+  a completeness check reading file presence would have scored as complete.
+- **corrected rule** — the payload is built before the file is opened, `meta` is copied and
+  updated rather than splatted beside keys it already owns, and the write goes to a temp file
+  followed by `os.replace`. A failure now leaves no file at all rather than an empty one,
+  which is a state a reader can distinguish.
+- **verification** — the two affected runs were repaired from `meta.json` and
+  `metrics.jsonl`, each repaired record naming itself post-hoc and giving the reason, so
+  none of the four presents itself as something it is not. Both wave-2 runs then exited 0
+  with complete records written by the process itself: `c1m_ce_seed1` 1625 bytes and
+  `c1m_elr_seed1` 1722 bytes, no stray `.tmp` in either directory.
