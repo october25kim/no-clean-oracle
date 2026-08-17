@@ -46,6 +46,7 @@ import json
 import os
 import random
 import re
+import subprocess
 import sys
 import time
 import zipfile
@@ -275,6 +276,19 @@ def train_one(learner: str, seed: int, batch: int, gpu: int | None = None) -> di
         dev = "cuda"
     dev_index = torch.cuda.current_device()
     dev_name = torch.cuda.get_device_name(dev_index)
+    # The index above is CONTAINER-LOCAL. Under --gpus "device=N" the container sees one
+    # GPU as index 0, so device_index is 0 for every run and device_name is the same model
+    # on all four cards -- neither identifies the physical GPU, which is the question D-9
+    # was misread on in the first place. The UUID is globally unique and resolves against
+    # `nvidia-smi --query-gpu=index,uuid` on the host, so record that too. Guarded: a
+    # missing nvidia-smi must degrade the record, never kill a 6-hour run.
+    try:
+        dev_uuid = subprocess.run(
+            ["nvidia-smi", "--query-gpu=uuid", "--format=csv,noheader"],
+            text=True, capture_output=True, timeout=30).stdout.split()
+        dev_uuid = dev_uuid[0] if len(dev_uuid) == 1 else dev_uuid
+    except Exception as exc:                       # noqa: BLE001 -- record, do not raise
+        dev_uuid = f"unavailable: {type(exc).__name__}"
 
     extract_train_images()
     x = np.load(TRAIN_NPY, mmap_mode="r")
@@ -321,6 +335,8 @@ def train_one(learner: str, seed: int, batch: int, gpu: int | None = None) -> di
                 torch=torch.__version__, cuda=torch.version.cuda,
                 cuda_visible=os.environ.get("CUDA_VISIBLE_DEVICES", ""),
                 device=dev, device_index=dev_index, device_name=dev_name,
+                device_uuid=dev_uuid,
+                device_index_note="container-local; UUID identifies the physical GPU",
                 code_stamp=code_stamp())
     with open(os.path.join(run_dir, "meta.json"), "w") as fh:
         json.dump(meta, fh, indent=1)

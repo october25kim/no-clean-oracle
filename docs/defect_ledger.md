@@ -222,6 +222,18 @@ deletes its own errors cannot be audited.**
     They are worth keeping for the reason the false claim was possible at all: the artifact
     could not previously answer which device it ran on, so the question had to be put to the
     launcher, and the launcher was read wrong.
+  - **Addendum, 2026-08-18: that instrumentation was insufficient as first written.** The
+    wave-2 CE run's `TERMINAL.json` records `device: cuda:0`, `device_index: 0`,
+    `device_name: NVIDIA TITAN RTX`. Under `--gpus "device=N"` a container sees its single
+    GPU as local index 0, and all four cards are the same model, so those three fields
+    identify the physical GPU no better than the bare `"cuda"` they replaced — they answer
+    the question this entry was withdrawn over no better than the code that caused it.
+    `recon_c1m.py` now also records `device_uuid` from `nvidia-smi` inside the container,
+    which resolves globally against `nvidia-smi --query-gpu=index,uuid`. That field is
+    forward-looking only: all four recon runs predate it, so their placement lives in
+    `results/exploratory_c1m/PLACEMENT.json`, captured from the container objects by
+    `scripts/capture_placement.py` before Docker prunes them. Confirmed there for all four:
+    CE on GPU 1, ELR on GPU 3, in both waves.
 - **status** — withdrawn. No wave-1 artifact was affected by the claim, and nothing was
   re-run on account of it. The wave-2 relaunch it triggered is harmless: wave 2 sits on
   GPUs 1 and 3, the same placement wave 1 had.
