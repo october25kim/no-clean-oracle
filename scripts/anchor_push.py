@@ -71,7 +71,7 @@ def record_push(public: str, internal: str, subject: str) -> None:
                            text=True, capture_output=True).stdout.strip()
     subj = subject.replace("Anchor snapshot: ", "").strip()
     last = sorted(((int(m.group(1)), m.group(0)) for m in
-                   re.finditer(r"^\| \d+ \| `[0-9a-f]{40}` \|.*$", txt, re.M)),
+                   re.finditer(r"^\| (\d+) \| `[0-9a-f]{40}` \|.*$", txt, re.M)),
                   key=lambda t: t[0])[-1][1]
     txt = txt.replace(last, f"{last}\n| {n} | `{public}` | {stamp} | `{internal[:7]}` | {subj} |")
     txt = re.sub(r"(R6-guard baseline.*?```\s*)[0-9a-f]{40}(\s*```)",
