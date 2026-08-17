@@ -226,3 +226,41 @@ are CPU-heavy enough to contend with its dataloaders.
 Like the A9 addendum, none of this can alter the anchored step-6
 adjudication, which stands on the registered primary analysis.
 Outputs are published whichever way they come out.
+
+### T11 estimand pin (appended before execution, 2026-08-17)
+
+Inferential target PINNED to the fixed-cells estimand:
+
+    psi = (1/12) * SUM_c P_seed(incompatible in cell c)
+
+The 12 registered conditions are a designed factorial grid, not
+a sample from a population of conditions, so no
+superpopulation-of-cells claim is made and none may be read out
+of the interval.
+
+Resampling has TWO layers, reported separately and never
+combined into one number:
+
+(i) Within-run evaluation bootstrap. ID indices are shared
+    across axes and across checkpoints so their correlation
+    survives the resample; OOD pools are resampled
+    independently; the WC class subset is re-derived inside the
+    cross-fit folds rather than held fixed from the full sample;
+    and the oracle, the IQR denominator, the radius and the
+    class are all recomputed per replicate. Reported as
+    F_cert / F_poss counts — certified and possible.
+
+(ii) Across-run uncertainty with seed clustering preserved,
+     stratified by cell, reported as an interval for psi.
+
+Certificate robustness (T6 under bootstrap, aggregation and
+delta) stays folded into T11 as already registered. No other
+change to the registered scope.
+
+**IQR quantile method, as actually used.** Every IQR in the
+corrected frame is `np.percentile(x, [75, 25])` with numpy's
+default, i.e. **linear interpolation** (numpy 1.26.4,
+`method='linear'`); verified empirically rather than assumed —
+on the integers 0..9 the implementation returns 4.5, matching
+linear and distinguishing it from midpoint (4.0) and nearest
+(5.0).
