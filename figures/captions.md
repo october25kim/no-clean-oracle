@@ -4,7 +4,7 @@ Four main figures, two appendix figures, one graphical abstract. F2 and F8 were 
 
 Presentation only. Every plotted number is read from `results/corrected/battery_g2.json` or `battery_tier1.json`; JSON paths are relative to `per_run[]` unless stated. Where one run is shown the selection rule is deterministic — the run whose ρ̂*_LE is the median of its eligible group, ties by run id — so the choice is checkable rather than a matter of trust. Each entry names the figure's single payload.
 
-Produced at `git_head` 9c9cc43, `git_tree_dirty` False.
+Produced at `git_head` 5f29c03, `git_tree_dirty` False.
 
 
 **F1 `mechanism_windows.pdf` [MAIN]** — payload: *the joint feasible set is empty*. Tier-1 run `c10n_worst_elr_seed0`, chosen by the deterministic rule (median ρ̂*_LE among the 27 runs classified incompatible at δ=0.10, ties by run id); ρ̂*_LE = 0.3797. Top panel: the three ĝ_a(t) curves with per-axis argmins marked and dropped to the axis. Bottom panel: each axis's feasible set {t : ĝ_a(t) ≤ 0.10} as a strip, and their intersection as a fourth strip, which is empty. Sources: `A1.axes.<a>.ghat` and `.t_star_grid_index`; the three per-axis strips are a threshold read of those stored curves at 0.10; the joint strip is `A2.per_delta.delta_0.1.F_delta` as stored.

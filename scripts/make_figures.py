@@ -142,21 +142,48 @@ def fig_F1(T: List[dict]) -> None:
 
 # ------------------------------------------------------------------ F3
 
+FLOOR = 1e-3          # log axis cannot show rho = 0; markers there are drawn at FLOOR
+
+
+def _assert_markers(drawn: Dict[str, int], expect: Dict[str, int], label: str) -> None:
+    """Refuse to emit a figure whose marker counts disagree with the taxonomy.
+
+    F3 was published with all 36 extension markers present but one of them — the single
+    rho = 0 run, drawn at the log floor with the axis bottom only 1.25x below it — sitting
+    hard against the spine, where an external count read 35 markers and two
+    compatible-solved instead of three. The marker was there; it was not visible as one.
+    Counting the artists after drawing is the check that would have caught it, so it now
+    runs before the file is written.
+    """
+    if drawn != expect:
+        raise SystemExit(f"{label}: marker counts {drawn} != taxonomy {expect}")
+    print(f"  [assert] {label}: {sum(drawn.values())} markers, per-class {drawn} — OK")
+
+
 def fig_F3(G: List[dict], T: List[dict]) -> None:
     fig, ax = plt.subplots(figsize=(W2, 3.1))
     x0 = 0
     counts = {}
-    for frame, runs in (("Phase II (15)", G), ("Tier 1 (36)", T)):
+    drawn: Dict[str, Dict[str, int]] = {}
+    for frame, runs in (("Phase II (15)", G), ("Extension (36)", T)):
         s = sorted(runs, key=lambda r: r["A2"]["rho_star_LE"])
         xs = np.arange(len(s)) + x0
+        seen: Dict[str, int] = {}
         for x, r in zip(xs, s):
             cls = r["A2"]["per_delta"]["delta_0.1"]["taxonomy"]
-            ax.plot(x, max(r["A2"]["rho_star_LE"], 1e-3), "o", ms=4.5,
-                    color=OI.get(cls, OI["grey"]), mec="white", mew=0.5, zorder=3)
-            if r["A2"]["rho_star_LE"] == 0.0:
-                ax.annotate(r["run_id"], (x, 1e-3), textcoords="offset points",
-                            xytext=(5, 12), fontsize=5.5, color=OI["grey"],
-                            arrowprops=dict(arrowstyle="-", lw=0.5, color=OI["grey"]))
+            seen[cls] = seen.get(cls, 0) + 1
+            y = max(r["A2"]["rho_star_LE"], FLOOR)
+            floored = r["A2"]["rho_star_LE"] < FLOOR
+            ax.plot(x, y, "o", ms=5.0 if floored else 4.5,
+                    color=OI.get(cls, OI["grey"]),
+                    mec="black" if floored else "white",
+                    mew=0.9 if floored else 0.5, zorder=4 if floored else 3)
+            if floored:
+                ax.annotate(f"{r['run_id']}  (ρ̂* = 0, drawn at the {FLOOR:g} floor)",
+                            (x, y), textcoords="offset points", xytext=(6, 13),
+                            fontsize=5.5, color="black",
+                            arrowprops=dict(arrowstyle="-", lw=0.5, color="black"))
+        drawn[frame.split()[0]] = seen
         ax.text(xs.mean(), 3.2, frame, ha="center", fontsize=8)
         counts[frame] = {f"{d:g}": sum(
             1 for r in runs
@@ -167,13 +194,15 @@ def fig_F3(G: List[dict], T: List[dict]) -> None:
     for d, ls in zip(DELTAS, [":", "-", "--"]):
         ax.axhline(d, color="black", lw=0.9, ls=ls, zorder=1)
         ax.text(-1.2, d, f"δ={d:g}", fontsize=6.5, ha="right", va="center")
-    tier = counts["Tier 1 (36)"]
+    tier = counts["Extension (36)"]
     ax.text(0.995, 0.02,
-            "Tier-1 runs above each line:  "
+            "Extension runs above each line:  "
             + "   ".join(f"δ={d:g} → {tier[f'{d:g}']}/36" for d in DELTAS),
             transform=ax.transAxes, ha="right", va="bottom", fontsize=6.5,
             bbox=dict(fc="white", ec=OI["grey"], lw=0.5, pad=2.5))
-    ax.set_yscale("log"); ax.set_ylim(8e-4, 4.0); ax.set_xlim(-7, x0 - 2)
+    ax.set_yscale("log"); ax.set_ylim(2.5e-4, 4.0); ax.set_xlim(-7, x0 - 2)
+    ax.axhline(FLOOR, color=OI["grey"], lw=0.5, ls=(0, (1, 3)), zorder=0)
+    ax.text(-1.2, FLOOR, "floor", fontsize=5.5, ha="right", va="center", color=OI["grey"])
     ax.set_xticks([])
     ax.set_xlabel("runs, sorted by ρ̂*_LE within frame")
     ax.set_ylabel("ρ̂*_LE   (log scale)")
@@ -181,6 +210,12 @@ def fig_F3(G: List[dict], T: List[dict]) -> None:
                for c in ("incompatible", "compatible-solved", "compatible-unsolved",
                          "indeterminate")]
     ax.legend(handles=handles, loc="upper left", frameon=False, ncol=2)
+    for frame, runs in (("Phase", G), ("Extension", T)):
+        exp = {}
+        for r in runs:
+            c = r["A2"]["per_delta"]["delta_0.1"]["taxonomy"]
+            exp[c] = exp.get(c, 0) + 1
+        _assert_markers(drawn[frame], exp, f"F3 {frame}")
     save(fig, "rho_dotplot",
          "**F3 `rho_dotplot.pdf` [MAIN]** — payload: *most runs sit well above δ, not "
          "marginally above it*. All 51 audited runs, frames separated, sorted ascending "
@@ -216,14 +251,15 @@ def _budget_panel(ax, T, key, title, annotate=None):
 
 def fig_F4(T: List[dict]) -> None:
     fig, axs = plt.subplots(2, 2, figsize=(W2, 4.0), sharex=True, sharey=True)
-    spec = [("ID->ID", "ID → ID", None), ("OOD->OOD", "OOD → OOD", None),
-            ("ID->OOD", "ID → OOD", "median max q = 0.216"),
-            ("mixed->OOD", "mixed → OOD", "median max q = 0.301")]
+    spec = [("ID->ID", "ID-only budget → ID axis", None),
+            ("OOD->OOD", "OOD-matched budget → OOD axis", None),
+            ("ID->OOD", "ID-only budget → OOD axis", "median max q = 0.216"),
+            ("mixed->OOD", "mixed budget → OOD axis", "median max q = 0.301")]
     for ax, (k, t, ann) in zip(axs.ravel(), spec):
         _budget_panel(ax, T, k, t, ann)
     axs[0, 0].text(52, 0.93, "q = 0.9 target", fontsize=6.5, color=OI["incompatible"])
     for ax in axs[1]:
-        ax.set_xlabel("clean labels n  (log)")
+        ax.set_xlabel("validation samples n (log scale)")
     for ax in axs[:, 0]:
         ax.set_ylabel("q(n)")
     save(fig, "budget_curves",
@@ -256,13 +292,18 @@ def fig_F5(G: List[dict]) -> None:
     pretty = {"E_tau1": "E(τ=1)", "NA": "NA", "ER_argmax": "ER",
               "LW_N_reported_not_gating": "LW-N"}
     top = ax.get_ylim()[1]
-    for s, lab in pretty.items():
-        if s not in r["A4"]["selectors"]:
-            continue
-        e = GRID[r["A4"]["selectors"][s]["grid_index"]]
+    # Selectors frequently land on the SAME epoch here, and stacked labels at one x were
+    # unreadable. Group by epoch, draw one rule per distinct epoch, and stagger the labels
+    # downward so every selector stays legible without moving any marker off its epoch.
+    by_epoch: Dict[int, List[str]] = {}
+    for k, lab in pretty.items():
+        if k in r["A4"]["selectors"]:
+            by_epoch.setdefault(GRID[r["A4"]["selectors"][k]["grid_index"]], []).append(lab)
+    for e, labs in sorted(by_epoch.items()):
         ax.axvline(e, color=OI["accent"], lw=1.0, alpha=0.85, zorder=2)
-        ax.text(e, top, f" {lab}", rotation=90, fontsize=6.5, va="top", ha="left",
-                color=OI["accent"])
+        for j, lab in enumerate(labs):
+            ax.text(e, top * (1 - 0.13 * j), f" {lab}", rotation=90, fontsize=6.5,
+                    va="top", ha="left", color=OI["accent"])
     ax.annotate("", xy=(joint[0], top * 0.55),
                 xytext=(GRID[r["A4"]["selectors"]["E_tau1"]["grid_index"]], top * 0.55),
                 arrowprops=dict(arrowstyle="<->", lw=0.9, color=OI["grey"]))
@@ -273,8 +314,8 @@ def fig_F5(G: List[dict]) -> None:
     ax.set_ylabel("ĝ$_a$(t)")
     ax.set_xlim(0, 124); ax.set_ylim(bottom=0)
     ax.legend(loc="upper left", frameon=False, ncol=3, columnspacing=1.1, handlelength=1.4)
-    ax.set_title("One checkpoint works — and nothing points to it", loc="left",
-                 fontsize=7.5)
+    ax.set_title("One checkpoint is jointly near-optimal — and no audited signal "
+                 "identifies it", loc="left", fontsize=7.0)
     w = r["A2"]["per_delta"]["delta_0.1"]["w_delta"]
     p = r["A5"]["per_delta"]["delta_0.1"]["p_unif"]
     save(fig, "case_study",
@@ -382,7 +423,7 @@ def fig_GA(T: List[dict]) -> None:
     med = _budget_panel(bx, T, "ID->OOD", "clean ID labels → OOD",
                         "ceiling  q ≈ 0.216")
     bx.tick_params(labelsize=6)
-    bx.set_xlabel("n (log)", fontsize=6.5); bx.set_ylabel("q(n)", fontsize=6.5)
+    bx.set_xlabel("validation samples n (log)", fontsize=6.5); bx.set_ylabel("q(n)", fontsize=6.5)
     fig.text(0.5, -0.09,
              "Most noisy-label trajectories contain no jointly deployable checkpoint — "
              "and clean ID labels cannot buy OOD selection.",
@@ -416,6 +457,15 @@ def tables(G: List[dict], T: List[dict]) -> List[str]:
     open(os.path.join(TAB, "A-T1_per_run.md"), "w").write("\n".join(lines) + "\n")
     print("  wrote docs/tables/A-T1_per_run.md")
 
+    # A-T3 carries the registered A9 addendum, which this script does not own. Rewriting
+    # it here would silently delete registered content on every figure regeneration -- the
+    # R2 dirty-tree guard blocked exactly that once, by luck rather than by design. If the
+    # addendum is present the file is left alone.
+    at3 = os.path.join(TAB, "A-T3_ood_decomposition.md")
+    if os.path.isfile(at3) and "Aggregation-variant taxonomy" in open(at3).read():
+        print("  A-T3 already carries the A9 addendum — left untouched")
+        notes.append("A-T3 left untouched: it carries the registered A9 addendum")
+        return notes
     keys = list(T[0]["A9"]["per_score_pool"].keys())
     l2 = ["# A-T3 — OOD decomposition per (score | pool), Tier 1", "",
           "Sources: `per_run[].A9.per_score_pool.<u|o>.{rho_star_LE,w_delta,"
