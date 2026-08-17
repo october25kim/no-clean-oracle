@@ -152,6 +152,32 @@ the classification argued.
   **file-set parity** against the internal `git ls-files`, refusing to push on any
   difference in either direction. The force-add fixes this cause; the parity check is what
   catches the next one.
+- **verification** — the corrected push (public `4c56d2c9540957f64b9c2c0243073c79585fe155`,
+  2026-08-16) was checked from a fresh clone: file-set difference 0, content differences
+  none across all 120 tracked paths, and each of the five restored files returns HTTP 200
+  at its raw URL. Prior anchors `7926c58` and `99c1b64` remain ancestors and the tag
+  `v1-pre-remediation` still resolves to `7926c582624e`.
 - **status** — fixed and re-anchored on 2026-08-16. Anchors 1–15 remain in the public
   history as they were pushed; they are not rewritten, and this entry is the record of what
   they omitted.
+
+### D-8b — the R6-guard baseline in `ANCHOR_CHAIN.md` went stale for nine pushes
+
+Filed alongside D-8; found in the same 2026-08-16 review.
+
+- **defect** — the push-history table and the R6-guard baseline stopped being updated after
+  anchor 6. The file continued to name `51b11618…` as the reference HEAD while the public
+  anchor advanced through nine further pushes to `99c1b647…`.
+- **why it did not fire** — every guard check in that window did compare against the
+  correct value, because the value was carried in the working session rather than read from
+  the file. That is precisely the fragility R7 exists to remove: a check that passes for a
+  reason the record does not contain is not a check the record can be audited against, and
+  it would have failed the moment a session resumed cold — which is how it was found.
+- **fix** — rows 7–15 were backfilled from the public repository's own commit log rather
+  than from memory, and the baseline was corrected. `scripts/anchor_push.py` now *parses*
+  the baseline out of `ANCHOR_CHAIN.md` instead of accepting it as an argument, so a stale
+  file makes the guard fail loudly rather than letting a session substitute a remembered
+  value.
+- **verification** — the corrected push ran through `anchor_push.py`, which read
+  `99c1b647…` from the file, matched it against the live remote HEAD, and only then
+  proceeded. The baseline now reads `4c56d2c9…` and row 16 is recorded.

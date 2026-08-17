@@ -163,3 +163,18 @@ ID and WC fixed, re-derive max_a ĝ_a(t) and the A3 taxonomy at
 the anchored step-6 adjudication, which stands on the primary
 aggregation; its output annotates robustness and is published
 either way. Executed after this registration is anchored.
+
+## A10b — DROPPED (review-side ruling, 2026-08-16)
+
+The A10b deferral registered above is closed by a review-side
+ruling of DROP. TGS-N is not transcribed and not computed; a
+§7.3 limitation line stands in its place. Nothing in the
+battery, the taxonomy, or the step-6 adjudication depended on
+it — A10 as executed covers LW-N only, and LW-N never gated.
+
+## Tier 2 — schedule of record (2026-08-16)
+
+Clothing1M resend due 2026-08-20; lapse ruling 2026-08-27. The
+gate is otherwise unchanged: OOD-far pin, officially obtained
+data, and a separate instruction. No external archive has been
+contacted at any point.
