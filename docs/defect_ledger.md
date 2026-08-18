@@ -389,3 +389,52 @@ deletes its own errors cannot be audited.**
 - **corrected rule** — `drive_fetch` now defines its own redactor and routes every emission
   through it, including the raised errors. The invariant is enforced by the code rather than
   maintained by whoever edits it next.
+
+### D-17 — measurement-path failure: the instrument reported corruption that did not exist
+
+- **found** — 2026-08-18. **Founds a new ledger category** (ruling 41-L2): failures of the
+  measuring path rather than of the thing measured.
+- **defect** — a listing of the fetched archives was piped through
+  `awk '{printf "%14d", $1}'`. awk's `%d` converts through a 32-bit signed integer, so every
+  size above 2^31-1 printed as exactly **2147483647**. All ten tars are larger than that, so
+  all ten reported the identical impossible size, which reads exactly like ten files
+  truncated to the same offset by a failing disk.
+- **impact** — none, and it did not reach a decision: the identical value across ten files of
+  known-different sizes was itself the tell. `stat`, `ls -l`, `du -b`, `find -printf %s` and
+  `os.path.getsize` were then run against the same files and all five agree on the true
+  sizes, and each archive ends in valid all-zero tar padding.
+- **why it matters more than a formatting slip** — every other entry in this ledger is a
+  defect in something the audit produced. This one is a defect in something the audit *used
+  to look*, and it manufactured evidence of a catastrophe. Had it been believed, the correct
+  response would have been to delete 22 GiB and re-fetch, on the strength of a number that
+  was never true. A measuring instrument that fails toward alarm is not safer than one that
+  fails toward silence; it is differently dangerous.
+- **corrected rule** — sizes and other quantities that can exceed 2^31 are formatted in
+  Python or with `%s`, never through awk's `%d`; and a reading that implies data loss is
+  confirmed with an independent tool before it is acted on or reported as fact.
+
+### D-18 — the manifest could describe a world that no longer existed
+
+- **found** — 2026-08-18, when the closing hygiene sweep reported the exploratory tree as
+  **0 paths**. The deletion itself was the owner's own Finder-side cleanup after the official
+  data arrived and was entirely benign; the guard's inability to see it was not.
+- **defect** — `check_data_hygiene` walked `data/` and checked each file it found against the
+  manifests. That is the disk->manifest direction only. A manifested file that is deleted is
+  never walked, so it was never checked, and the guard returned a clean run while all three
+  exploratory entries described files that had ceased to exist. The manifest was not a weaker
+  pin at that point; it was a false one.
+- **impact** — none on any result. `MANIFEST.exploratory.json` now carries a status block
+  recording the deletion, and the recon outputs survive, so REPORT 36 remains re-derivable
+  from records. The recon is not rerunnable from scratch.
+- **corrected rule** — the guard checks **both directions**. `missing_from_disk` reports
+  manifested paths with no file, as a warning rather than a refusal, because a deletion may
+  be deliberate and the guard's job is to make it visible rather than to adjudicate it. The
+  seal is excluded from this direction because it is keyed by basename and carries no path
+  to check; `known_paths` returns an empty map rather than inventing one.
+- **also fixed in the same pass** — the official tree is now keyed by its own
+  `CHECKSUMS.sha256`, which the guard previously did not know about; on first contact it
+  refused every launch by treating 1,072,417 legitimate inputs as foreign. Re-digesting a
+  million files per launch is not a gate anyone would keep, so the default verifies presence
+  for all and digests a fixed pseudo-random sample of 64, with `--deep` for the full pass.
+  The sample seed is fixed so successive runs check the same files and a drifting file cannot
+  hide behind fresh luck.

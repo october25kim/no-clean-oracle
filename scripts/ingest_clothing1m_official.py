@@ -232,7 +232,12 @@ def main(argv=None) -> int:
             download(url, a.folder)
         del url
 
-    raw_files = [os.path.join(dp, f) for dp, _d, fs in os.walk(RAW) for f in fs]
+    # Layer (b) covers archives and extracted content only (ruling 40-L1). macOS metadata is
+    # never data, and a first pass swept four such files into CHECKSUMS.sha256, pinning
+    # AppleDouble stubs as if they were part of the release. They are excluded here rather
+    # than filtered later, so the manifest cannot contain them in the first place.
+    raw_files = [os.path.join(dp, f) for dp, _d, fs in os.walk(RAW) for f in fs
+                 if not (f.startswith("._") or f == ".DS_Store")]
     if not raw_files:
         raise SystemExit(f"{os.path.relpath(RAW, ROOT)} is empty; nothing to ingest")
     total = sum(os.path.getsize(f) for f in raw_files)
@@ -265,6 +270,16 @@ def main(argv=None) -> int:
 
         ok, report = verify_structure(EXTRACTED)
         print(json.dumps(report, indent=1))
+
+        # Layer (b) is the canonical pin and covers archives AND extracted content
+        # (ruling 40-L1). Written before the tree is frozen, over both roots, with macOS
+        # metadata excluded at the source rather than filtered afterwards.
+        ext_files = [os.path.join(dp, f) for dp, _d, fs in os.walk(EXTRACTED) for f in fs
+                     if not (f.startswith("._") or f == ".DS_Store")]
+        print(f"[ingest] layer (b): hashing {len(raw_files) + len(ext_files):,} files "
+              f"({len(raw_files)} archives + {len(ext_files):,} extracted)", flush=True)
+        write_checksums(raw_files + ext_files)
+
         freeze(EXTRACTED, recursive=True)       # chmod -R a-w
         os.close(fd)
         if not ok:

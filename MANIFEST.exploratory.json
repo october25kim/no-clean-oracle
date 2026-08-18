@@ -24,5 +24,11 @@
    "bytes": 3824,
    "mtime_utc": "2026-08-17T06:43:04Z"
   }
+ },
+ "status": {
+  "as_of": "2026-08-18",
+  "statement": "input data deleted by owner 2026-08-18 after official-data acquisition; recon outputs retained (battery_recon.json, forward/, four run dirs); REPORT 36 numbers re-derivable from records; recon non-rerunnable from scratch; [EXPLORATORY] classification and zero-manuscript-use ruling unchanged",
+  "entries_present_on_disk": false,
+  "why_recorded": "the entries below describe files that no longer exist. They are kept, not removed, because the digests are the only surviving evidence of what the recon actually consumed. check_data_hygiene now reports the manifest->disk direction, so this state is visible rather than silent."
  }
 }

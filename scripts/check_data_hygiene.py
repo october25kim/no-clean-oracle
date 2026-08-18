@@ -15,6 +15,7 @@ import argparse
 import hashlib
 import json
 import os
+import random
 import sys
 from typing import Dict, List, Tuple
 
@@ -23,10 +24,18 @@ DATA = os.path.join(ROOT, "data")
 MANIFEST = os.path.join(ROOT, "results", "cifar_n_masks", "MANIFEST.json")
 EXPLORATORY_MANIFEST = os.path.join(ROOT, "MANIFEST.exploratory.json")
 EXPLORATORY_ROOT = os.path.join("data", "exploratory")
+OFFICIAL_ROOT = os.path.join("data", "clothing1m_official")
+OFFICIAL_CHECKSUMS = os.path.join(ROOT, OFFICIAL_ROOT, "CHECKSUMS.sha256")
+SAMPLE_N = 64                      # deterministic spot-check when not running --deep
 
 # Filesystem noise that is never a data input and never worth flagging.
 IGNORED_BASENAMES = {".DS_Store"}
 IGNORED_PREFIXES = ("._",)          # macOS resource forks
+
+# A tree's own pin and provenance record are not inputs to anything; they describe the
+# inputs. Listing them as unmanifested would make the guard demand that the manifest
+# manifest itself.
+SELF_DESCRIBING = {"CHECKSUMS.sha256", "PROVENANCE.md", "MANIFEST.json"}
 
 
 def _sha256(path: str) -> str:
@@ -59,7 +68,44 @@ def exploratory() -> Dict[str, str]:
     return {p: e["sha256"] for p, e in m.get("entries", {}).items()}
 
 
-def scan(data_dir: str = DATA) -> Tuple[List[str], List[str], List[str], List[str]]:
+def official() -> Dict[str, str]:
+    """{repo-relative path: sha256} from the official tree's own CHECKSUMS.sha256.
+
+    The official release is pinned by its own manifest rather than by the CIFAR-N seal, so
+    the guard has to read that file or else treat 1,072,417 legitimate inputs as foreign and
+    refuse every launch -- which is exactly what it did on first contact.
+    """
+    if not os.path.isfile(OFFICIAL_CHECKSUMS):
+        return {}
+    out = {}
+    with open(OFFICIAL_CHECKSUMS) as fh:
+        for line in fh:
+            line = line.rstrip("\n")
+            if not line or line.startswith("#"):
+                continue
+            digest, _, rel = line.partition("  ")
+            if digest and rel:
+                out[os.path.join(OFFICIAL_ROOT, rel)] = digest
+    return out
+
+
+def missing_from_disk(*manifests: Dict[str, str]) -> List[str]:
+    """The manifest->disk direction: entries that describe files which are not there.
+
+    The disk->manifest direction alone cannot see a deletion. When the exploratory tree was
+    removed, every one of its three manifested files vanished and the guard reported a clean
+    run, because it only ever walked what existed. A manifest that describes a world that is
+    gone is not a weaker pin, it is a false one.
+    """
+    gone = []
+    for m in manifests:
+        for rel in m:
+            if not os.path.exists(os.path.join(ROOT, rel)):
+                gone.append(rel)
+    return sorted(gone)
+
+
+def scan(data_dir: str = DATA, deep: bool = False):
     """Return (ok, unmanifested, hash_mismatch, exploratory_ok) as repo-relative paths.
 
     Exploratory-class entries under ``data/exploratory/**`` are recognised so that their
@@ -71,14 +117,29 @@ def scan(data_dir: str = DATA) -> Tuple[List[str], List[str], List[str], List[st
     """
     known = manifested()
     expl = exploratory()
+    offi = official()
     ok, unknown, mismatch, expl_ok = [], [], [], []
+    off_ok = []
+    rng = random.Random(20260818)
+    sampled = set(rng.sample(sorted(offi), min(SAMPLE_N, len(offi)))) if offi else set()
     for dirpath, _dirnames, filenames in os.walk(data_dir):
         for name in sorted(filenames):
             if name in IGNORED_BASENAMES or name.startswith(IGNORED_PREFIXES):
                 continue
+            if name in SELF_DESCRIBING or name.endswith(".lock"):
+                continue
             path = os.path.join(dirpath, name)
             rel = os.path.relpath(path, ROOT)
-            if rel in expl:
+            if rel in offi:
+                # Re-hashing 1.07M files on every launch is not a gate anyone would keep, so
+                # the default verifies presence for all and digests a fixed pseudo-random
+                # sample; --deep digests everything. The sample seed is fixed so two runs
+                # check the same files and a drifting file cannot hide behind fresh luck.
+                if deep or rel in sampled:
+                    (off_ok if _sha256(path) == offi[rel] else mismatch).append(rel)
+                else:
+                    off_ok.append(rel)
+            elif rel in expl:
                 (expl_ok if _sha256(path) == expl[rel] else mismatch).append(rel)
             elif name in known:
                 (ok if _sha256(path) == known[name] else mismatch).append(rel)
@@ -86,12 +147,20 @@ def scan(data_dir: str = DATA) -> Tuple[List[str], List[str], List[str], List[st
                 unknown.append(rel)      # inside data/exploratory but not manifested
             else:
                 unknown.append(rel)
-    return ok, unknown, mismatch, expl_ok
+    return ok, unknown, mismatch, expl_ok, off_ok, missing_from_disk(known_paths(known), expl, offi)
+
+
+def known_paths(known: Dict[str, str]) -> Dict[str, str]:
+    """The seal is keyed by basename, so it cannot be checked in the manifest->disk
+    direction without a path. Returns an empty map rather than inventing one."""
+    return {}
 
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--data-dir", default=DATA)
+    p.add_argument("--deep", action="store_true",
+                   help="digest every official-tree file instead of a fixed sample")
     p.add_argument("--allow-unmanifested", action="store_true",
                    help="proceed despite files data/ that the seal does not account for")
     a = p.parse_args(argv)
@@ -99,7 +168,19 @@ def main(argv=None) -> int:
     if not os.path.isdir(a.data_dir):
         print(f"[data-hygiene] {a.data_dir} does not exist; nothing to check")
         return 0
-    ok, unknown, mismatch, expl_ok = scan(a.data_dir)
+    ok, unknown, mismatch, expl_ok, off_ok, gone = scan(a.data_dir, a.deep)
+    if off_ok:
+        mode = "every file" if a.deep else f"presence + {SAMPLE_N} sampled digests"
+        print(f"[data-hygiene] {len(off_ok):,} official-tree file(s) accounted for by "
+              f"CHECKSUMS.sha256 ({mode})")
+    if gone:
+        print(f"[data-hygiene] {len(gone)} MANIFESTED FILE(S) NOT ON DISK — a manifest is "
+              f"describing files that are gone:")
+        for r in gone:
+            print(f"    {r}")
+        print("[data-hygiene] this is a warning, not a refusal: a deletion may be "
+              "deliberate. It is reported because a guard that only walks what exists "
+              "cannot see one at all.")
     print(f"[data-hygiene] {len(ok)} manifested file(s) verified by sha256")
     if expl_ok:
         print(f"[data-hygiene] {len(expl_ok)} exploratory-class file(s) verified "
