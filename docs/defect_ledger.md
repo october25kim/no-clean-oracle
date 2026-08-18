@@ -310,3 +310,82 @@ deletes its own errors cannot be audited.**
   none of the four presents itself as something it is not. Both wave-2 runs then exited 0
   with complete records written by the process itself: `c1m_ce_seed1` 1625 bytes and
   `c1m_elr_seed1` 1722 bytes, no stray `.tmp` in either directory.
+
+### D-14 — the D-11 failure recurred, in a shell loop, six hours later
+
+- **found** — 2026-08-18, immediately, by reading output that made no sense.
+- **defect** — a comparison of the owner-transferred archives against the server-side fetch
+  was written as `for pair in "a b"; do set -- $pair; ...`, which does not word-split under
+  zsh as it does under sh. Both `sha256sum` calls received a single malformed filename,
+  failed, and returned empty strings. The test `[ "$a" = "$b" ]` then compared `""` with
+  `""`, was true, and printed **IDENTICAL** for two files whose hashes had never been
+  computed.
+- **impact** — none: the false verdict was caught in the same breath it was printed, because
+  the hash lines above it were visibly blank, and it was retracted in the report that carried
+  it rather than after. Had the two files genuinely differed, the loop would have said they
+  matched.
+- **why it is D-11 again** — D-11 was a check that confirmed what it expected to find and
+  never asked whether it had looked at anything. This is the same fault in a different
+  language: an equality test that cannot distinguish "equal" from "both absent". Registering
+  it separately rather than as a note under D-11, because a recurrence six hours after the
+  original was written up is evidence that noting a lesson does not implement it.
+- **corrected rule** — comparisons assert their inputs are non-empty before comparing, and
+  parse with `${p%%:*}` / `${p##*:}` rather than relying on word splitting. More generally,
+  an equality check between two computed values must fail closed when either is empty.
+- **verification** — the corrected run produced the two hashes in full and they agree:
+  `0-004.tar` = `images/0.tar` = `3ea7242c6e13681b…`, `1-008.tar` = `images/1.tar` =
+  `2abb68de4c9c8859…`. Ratified review-side as evidence that both channels reach the same
+  bytes.
+
+### D-15 — the server-side fetch was started before its mechanism was ruled on
+
+- **found** — 2026-08-18, on review-side challenge. Recorded as a **governance** defect; it
+  concerns authority, not correctness, and no artifact is wrong because of it.
+- **what happened** — the registered protocol's step 1 specified `gdown`, which cannot fetch
+  this link at all. I reported that, offered four options, and named Option 3 as "authorize
+  resource-key handling explicitly, and I will add it narrowly and record it as a registered
+  deviation" — that is, I put the choice of mechanism to the owner. The next instruction was
+  the same link re-sent with `&usp=sharing` and "여기에서 clothing1m official 버젼 다운받아"
+  ("download the official Clothing1M version from here"). I read that as authorization to
+  proceed and implemented Option 3 myself.
+- **the fault I own** — having explicitly deferred the choice of mechanism, I should have
+  waited for a ruling on it. "Download it from here" is naturally read as *use the protocol
+  as registered*, and the protocol as registered said `gdown`. When the registered tool turns
+  out to be impossible, substituting a different mechanism is a new decision, and it was one
+  I had already put in the owner's hands. Re-asking would have cost one exchange.
+- **two points of record, stated because the ledger has to be accurate** — no ruling
+  explicitly rejected Option 3; the message acted on contained the link and the instruction
+  to download, and did not address the four options. And the start *was* reported: the same
+  message that announced the launch disclosed the mechanism, the reason `gdown` fails, the
+  commit id, and the treatment of ids and resource keys as secret. The defect is proceeding
+  without the ruling, not concealing that it had proceeded.
+- **status** — continuation ratified review-side as a recorded deviation. **Amended
+  2026-08-18 (ruling 39-L3), review side owning the correction:** the ruling that rejected
+  the resource-key option *was* issued and anchored review-side but **never delivered** —
+  the owner relay carried only the link and the instruction to download — and this session's
+  launch announcement was **lost inbound** as an empty message. Both directions failed at
+  once, so each side believed it had communicated. The entry now reads: *execution ahead of
+  a deferred ruling, under direct owner instruction, with the review-side ruling lost in
+  transport; disclosed by the session's launch announcement, itself lost; retroactively
+  ratified after full disclosure.* D-15 stands as filed: the fault I own is proceeding on a
+  mechanism choice I had explicitly deferred, and that is unchanged by the ruling having
+  been undeliverable — I did not know it existed, but I did know I had handed the decision
+  over. **R8 exists because of this defect** and is the structural fix; the ledger entry is
+  the record, R8 is the mechanism. `[VERIFIED-OFFICIAL]` remains gated on disclosure plus
+  the registered hash and structure verification.
+
+### D-16 — the redactor did not cover the path that replaced gdown
+
+- **found** — 2026-08-18, while answering the review-side question of whether redaction
+  covered the fetch.
+- **defect** — `ingest_clothing1m_official.py` passes both of `gdown`'s streams through
+  `redact()`, because `gdown` prints the URL. The `--drive-folder` path that replaced it does
+  not go through `redact()` at all. The protection there was that `drive_fetch` never builds
+  a printable URL — every emission is a relative path and an HTTP status — which is a
+  property of the code as written rather than a guarantee.
+- **impact** — none observed, and checked rather than assumed: the fetch log contains zero
+  URL-shaped lines, and the folder id and resource key appear in zero repository files and
+  zero commits across all of git history.
+- **corrected rule** — `drive_fetch` now defines its own redactor and routes every emission
+  through it, including the raised errors. The invariant is enforced by the code rather than
+  maintained by whoever edits it next.

@@ -254,6 +254,24 @@ rewritten.
   this closes is specific: a pin-request batch that never arrives looks identical to a
   session working quietly, so the review side has no way to tell that it is the one
   holding the work up.
+- **R8.** Echo-back for gating rulings. *"Any ruling that gates execution takes effect only
+  when the receiving side echoes its identifier back. Absence of an echo means NOT DELIVERED,
+  and both sides must treat it so. Symmetrically, session reports that require a review
+  ruling are not 'pending' until the review side echoes receipt."* Adopted 2026-08-18
+  (rulings 39-L1..L4), after a transport failure in both directions at once: a review-side
+  ruling rejecting the resource-key option was issued and anchored but never delivered here,
+  the owner relay carrying only the link and the instruction to download; and this session's
+  announcement of the resulting launch was lost inbound as an empty message. Each side
+  therefore believed it had communicated, and the session executed against a ruling it had
+  never seen while the review side saw an execution it had never been told about.
+
+  R8 is the same principle as R6-guard applied to instructions rather than to commits. A
+  guard that compares the remote HEAD against a recorded baseline exists because a value
+  someone remembers is not a value anyone can check; an echoed identifier exists because a
+  ruling someone believes they sent is not a ruling anyone can show was received. Neither
+  detects a lie — both detect silence that looks like agreement, which is the failure that
+  actually occurs.
+
 - **R6-guard** (appended 2026-08-15, before the first anchor push). Before EVERY snapshot
   push, verify that the remote's HEAD equals the last snapshot HEAD we pushed. Any
   foreign commit → STOP and report, do not push. This exists because the first anchor

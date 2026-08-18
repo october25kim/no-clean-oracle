@@ -35,11 +35,13 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
 import time
 from typing import Dict, List, Optional, Tuple
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE = os.path.join(ROOT, "data", "clothing1m_official")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 RAW = os.path.join(BASE, "raw")
 EXTRACTED = os.path.join(BASE, "extracted")
 CHECKSUMS = os.path.join(BASE, "CHECKSUMS.sha256")
@@ -199,6 +201,8 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--url-env", help="env var holding the link (never argv)")
     p.add_argument("--folder", action="store_true", help="link is a Drive folder")
+    p.add_argument("--drive-folder", action="store_true",
+                   help="Drive folder needing a resource key; bypasses gdown, which drops it")
     p.add_argument("--skip-download", action="store_true",
                    help="raw/ is already populated; resume at checksums")
     p.add_argument("--extract", action="store_true",
@@ -209,7 +213,23 @@ def main(argv=None) -> int:
 
     if not a.skip_download:
         url = read_url(a)                       # never printed, never stored
-        download(url, a.folder)
+        if a.drive_folder:
+            # gdown cannot fetch this link in either mode: it derives the id from the URL
+            # path and discards the query string, so `resourcekey` never reaches the
+            # request and Drive answers 401. See scripts/drive_fetch.py. The id and key are
+            # parsed here, held in memory, and never written anywhere -- together they
+            # reconstruct the link.
+            import drive_fetch
+            q = urllib.parse.urlparse(url)
+            fid = q.path.rstrip("/").split("/")[-1]
+            key = urllib.parse.parse_qs(q.query).get("resourcekey", [""])[0]
+            if not key:
+                raise SystemExit("--drive-folder needs a link carrying ?resourcekey=")
+            os.makedirs(RAW, exist_ok=True)
+            drive_fetch.fetch_folder(fid, key, RAW)
+            del fid, key
+        else:
+            download(url, a.folder)
         del url
 
     raw_files = [os.path.join(dp, f) for dp, _d, fs in os.walk(RAW) for f in fs]
