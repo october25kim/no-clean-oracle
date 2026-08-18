@@ -11,8 +11,24 @@ of the amendment stand as written.
 The amendment left OOD-far as "[PIN at sealing: one disjoint-domain natural-image pool,
 resized to 224; candidate list fixed from what is licensable and locally available]".
 
-**Pinned: ISIC2019 dermoscopic images**, 50,662 images, natively 224x224 / 298x224 so the
-resize to 224 introduces essentially no resampling artifact.
+**Pinned: ISIC2019 dermoscopic images**, **25,331 images** from
+`ISIC_2019_Training_Input_preprocessed`, whose short side is already 224 (modal sizes
+224x224 and 298x224, tail to ~337x224), so the resize to 224 introduces essentially no
+resampling artifact.
+
+> **Correction, appended 2026-08-19 (R1: follow-up, not a rewrite).** The figure first
+> registered here, and ratified on that basis, was *50,662 images*. That number was wrong: it
+> came from a recursive glob that counted `ISIC_2019_Training_Input` and
+> `ISIC_2019_Training_Input_preprocessed` as separate pools, when they are the same 25,331
+> images stored twice — once at native camera resolution (modal 1024x1024 and 600x450) and
+> once preprocessed to a 224 short side. The pinned pool is the **preprocessed** copy, and its
+> size is **25,331**, exactly half what was ratified.
+>
+> The pin itself is unaffected in substance: 25,331 is still six times the OfficeHome
+> sensitivity pool (3,965) and far more than an AUROC against a 10,526-image ID set requires,
+> and the domain-disjointness and favorable-direction arguments do not depend on pool size.
+> What was wrong was a count in a ratified document, which is corrected here rather than
+> quietly amended in place.
 
 **Registered caveat, required in any report using this pool:** dermoscopy carries distinctive
 low-level image statistics that plausibly make OOD detection *easier* than a consumer-photo
