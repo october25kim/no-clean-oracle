@@ -130,13 +130,14 @@ hard-coded push URL into our public record. The R6-guard in
 | 34 | `1fc5a084fbb96a7319c2b065b4bdcf20ddc9514a` | 2026-08-17T21:18:49Z | `6814811` | REPORT 36 and D-13 |
 | 35 | `40c0dc19bbe1e486d597ea1b5f24556769cfa9a3` | 2026-08-18T03:09:29Z | `5ef224d` | official Clothing1M ingestion, pre-committed |
 | 36 | `52bd4d07ea0f38044b832ff47ccd6a225938bc2e` | 2026-08-18T04:39:37Z | `7db5b64` | R8, D-14/D-15/D-16, Clothing1M provenance |
+| 37 | `5386c6b7fa4d336465f6d926d1644357893c91a1` | 2026-08-18T10:29:19Z | `0357aee` | Tier-2 follow-up, hygiene two-direction fix, D-17/D-18 |
 
 ### R6-guard baseline
 
 Reference HEAD for the equality check that precedes every future snapshot push:
 
 ```
-52bd4d07ea0f38044b832ff47ccd6a225938bc2e
+5386c6b7fa4d336465f6d926d1644357893c91a1
 ```
 
 Before the next push, the remote's HEAD must equal this value. Any other commit means a

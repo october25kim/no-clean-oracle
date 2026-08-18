@@ -438,3 +438,49 @@ deletes its own errors cannot be audited.**
   for all and digests a fixed pseudo-random sample of 64, with `--deep` for the full pass.
   The sample seed is fixed so successive runs check the same files and a drifting file cannot
   hide behind fresh luck.
+
+### D-19 — five defects in T11, caught before the registered execution
+
+- **found** — 2026-08-19, by an adversarial review of `scripts/t11_joint_bootstrap.py` against
+  its own registration: five independent lenses raised 35 findings, 17 survived a refutation
+  pass instructed to default to refuted, and those deduplicated to five distinct defects. Two
+  were then verified directly rather than accepted on report. **No artifact is affected: all
+  five were fixed before any registered run, so nothing was retracted.**
+- **defect 1, the consequential one** — psi was computed by averaging each run's layer-(i)
+  bootstrap frequency `P_boot(incompatible)`. The pinned `P_seed` is a probability over
+  **seeds** of the **registered** taxonomy. The as-coded estimator was a joint
+  seed-x-evaluation-resample quantity carrying the estimand's name, which is precisely what
+  the pin's "reported separately and never combined into one number" forbids. Verified
+  independently: the correct plug-in is **psi = 0.7500** over 12 cells and 36 runs, and the
+  as-coded version would not have returned it — `c100n_ce_seed1` is registered
+  `compatible-unsolved` and must contribute 0, but entered as 0.25.
+- **defect 2** — the WC tail was proposed and scored on the **same** resample weights. The pin
+  says "re-derived inside the cross-fit folds"; the draft's own docstring had quietly rewritten
+  that to "inside each replicate", and the file contained no folds. That is the exact defect
+  T10 exists to measure, committed inside the bootstrap meant to quantify it. Fixed to propose
+  out-of-fold and score in-fold, with the plain and control arms retained because the pin names
+  a cross-fitted *variant* — the comparison is the deliverable. Measured afterwards: the arms
+  differ in tail instability by three orders of magnitude and in every downstream quantity by a
+  few percent, so the correction was **required for fidelity and not load-bearing for the
+  conclusion**. Both halves of that are reported.
+- **defect 3** — registered scope silently absent: the delta grid, the OOD aggregation arms,
+  and certificate robustness (T6 under bootstrap). `DELTAS` was imported and never used. The
+  omission mattered: with certificates restored, **0 of 36 survive at 95% robustness**, so the
+  first version would have carried point-estimate certificates with no robustness check at all.
+- **defect 4** — the per-run RNG seed came from Python's `hash()` on a string, which is salted
+  per process. Measured on this machine: the same run id produced 765458, 8440631 and 42092 in
+  three interpreters, and no `PYTHONHASHSEED` is set anywhere in the repository. The code's own
+  comment claimed the seed "reproduces exactly", which was false. Now sha256-derived, recorded
+  as `boot_seed`, with collisions checked rather than argued. **The same `hash()` pattern exists
+  at `run_corrected_battery.py:372` and has already executed into `battery_tier1.json` A11** —
+  that one is a recorded fact about an existing artifact, not a pre-execution fix, and A11's
+  bootstrap is not reproducible from the stored record.
+- **defect 5** — the docstring claimed the frame was "verified against the frame before anything
+  is resampled" while the only structural check ran *after* every within-run bootstrap had
+  finished. A gate that fires after the work is not a gate. `verify_frame` now refuses to start
+  without 36 runs, 12 cells and 3 distinct seeds per cell.
+- **what the pattern says** — four of the five were discrepancies between what the code did and
+  what its own docstring said it did. Prose next to code is not a check on the code, and in
+  three places here the prose was the more accurate-sounding of the two. The review found them
+  by reading the registration and the implementation against each other, which is the one
+  comparison a self-review reliably fails to make.
