@@ -133,13 +133,14 @@ hard-coded push URL into our public record. The R6-guard in
 | 37 | `5386c6b7fa4d336465f6d926d1644357893c91a1` | 2026-08-18T10:29:19Z | `0357aee` | Tier-2 follow-up, hygiene two-direction fix, D-17/D-18 |
 | 38 | `7acf307b66898463d2ed70c66f356e1e77ee3c69` | 2026-08-18T17:50:07Z | `19fb121` | REPORT 40 (T10+T11) and D-19 |
 | 39 | `31ef178366a436e5d14a228e64f8de562aff7b7f` | 2026-08-18T19:49:26Z | `b22c844` | ISIC2019 pool-size correction |
+| 40 | `828de970c591205b0cb43a96bd1f2d08b95c8ba9` | 2026-08-22T05:04:01Z | `e489aab` | Tier-2 forward pass and A1-A5 battery executed |
 
 ### R6-guard baseline
 
 Reference HEAD for the equality check that precedes every future snapshot push:
 
 ```
-31ef178366a436e5d14a228e64f8de562aff7b7f
+828de970c591205b0cb43a96bd1f2d08b95c8ba9
 ```
 
 Before the next push, the remote's HEAD must equal this value. Any other commit means a

@@ -484,3 +484,52 @@ deletes its own errors cannot be audited.**
   three places here the prose was the more accurate-sounding of the two. The review found them
   by reading the registration and the implementation against each other, which is the one
   comparison a self-review reliably fails to make.
+
+### D-20 — Tier-1 SOP omitted Algorithm 1's projection; the bound was contacted in all 9 runs
+
+- **found** — 2026-08-22, under ruling 49-L1, which asked first whether the question is
+  answerable from stored artifacts. It is: the Tier-1 SOP checkpoints persist `u` and `v` in
+  `loss_state`, so all 9 runs x 24 checkpoints were audited rather than argued about. Raw
+  figures in `results/tier1_sop_uv_audit.json`.
+- **bound contact: YES, in every run, and not marginally.** `max|u|` runs 1.55 (c100n) to
+  **10.68** (c10n_random1_seed1), and the fraction of `u` entries above the bound is 16.5-17%
+  on c100n, ~19% on c10n_random1 and **38%** on c10n_worst. So 49-L1's "no contact, provably
+  no effect, close it" branch does not apply.
+- **`v` never exceeded the bound in any run.** `max|v|` is exactly 1.000000 with **zero**
+  entries above it and thousands sitting precisely at it. That is not a projection: the MSE
+  term's target for a non-label class the network predicts is `V_square = 1` exactly, so `v`
+  has an attractor at |v| = 1 and arrives rather than overshoots. For `v` the projection
+  would have been a no-op.
+- **Why `u` behaves differently.** `u` receives gradient from the CE term as well as the MSE
+  term (`V_square` is detached in CE, `U_square` is not). CE pushes `U_square` up without an
+  attractor, `u` overshoots the bound in a single step at `alpha_u` = 1-10, and
+  `clamp(u^2, 0, 1)` then zeroes its gradient permanently. It is frozen wherever it landed.
+- **What the omission did and did not change**, measured rather than reasoned:
+  - **The loss and the network's gradients are identical.** On the same batch, `u` = 1.0 and
+    `u` = 10.681182861328125 give loss `1.1230168343` and logit-gradient norm `0.0905222222`
+    to every printed digit, because the objective only ever sees `clamp(u^2, 0, 1)`, which
+    saturates at 1 either way. **No trained Tier-1 SOP model differs because of this.**
+  - **The recovery dynamics do differ.** At `u` = 1.0 the clamp still passes gradient
+    (measured: d/du = 2.000000 at exactly 1.0, 0.000000 at 1.001), so a projected `u` sits at
+    the bound and can descend again if the sample later becomes well classified. The
+    unprojected `u` at 10.68 is frozen for the rest of training and can never come back.
+- **status** — the honest verdict is neither of 49-L1's two branches. The omission is
+  **provably inert for the objective and the fitted weights**, and **potentially live for the
+  trajectory of `u`**, in a direction that cannot be settled from stored artifacts because it
+  would require re-running with projection to see whether any frozen `u` would have
+  recovered. 49-L1 forbids re-running, so it stays open and stated. Tier 2, which persists
+  the check, never contacted the bound at all (`frac_at_bound` 0.00% in both SOP seeds), so
+  the question does not touch the Tier-2 numbers.
+
+### D-21 — registered output paths were root-owned by the training containers
+
+- **found** — 2026-08-22, when the Tier-2 battery computed every run and then died at the
+  write with `PermissionError` on `results/tier2/battery_tier2.json.tmp`.
+- **defect** — the training containers run as root, so every directory they created under
+  `results/` is root-owned and the host user cannot write into it. The analysis step only
+  discovers this after doing all of its work.
+- **corrected rule** — ownership is fixed with `chown` through a root container, **not** by
+  redirecting the output somewhere writable. The registered output path is part of the
+  registration; moving the artifact to dodge a permission error would leave the script and
+  the record naming different files. Cost of the wrong fix is low and permanent; cost of the
+  right one is one command.
