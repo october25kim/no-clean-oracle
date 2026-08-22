@@ -48,6 +48,11 @@ MOMENTUM = 0.9
 WEIGHT_DECAY = 0.001
 EPOCHS = 10
 CKPT_PER_EPOCH = 2
+# Clothing-1M column of Table A.1, arXiv:2202.14026v2 / PMLR v162 pp.14153-14172, pinned by
+# ruling 48-L2 and transcribed in docs/TRANSCRIPTION.md. VERIFIED against the paper text.
+SOP_ALPHA_U = 0.1
+SOP_ALPHA_V = 1.0
+SOP_PROJECT = 1.0          # u, v projected to [-1, 1] after each step
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
@@ -88,12 +93,6 @@ def main(argv=None) -> int:
     p.add_argument("--workers", type=int, default=8)
     a = p.parse_args(argv)
 
-    if a.learner == "sop":
-        raise SystemExit(
-            "SOP is blocked: no alpha_u / alpha_v pin exists for Clothing1M. Table A.1 has a "
-            "Clothing-1M column but docs/TRANSCRIPTION.md transcribes only the CIFAR rows, "
-            "and configs key SOP alphas by split so a new split cannot inherit silently. "
-            "Pin it review-side; this script will not improvise the value.")
 
     import torch
     import torch.nn as nn
@@ -140,6 +139,17 @@ def main(argv=None) -> int:
                           weight_decay=WEIGHT_DECAY)
     crit = nn.CrossEntropyLoss()
 
+    sop = None
+    if a.learner == "sop":
+        sys.path.insert(0, os.path.join(ROOT, "src"))
+        from train.sop import SOPLoss
+        # u and v are per-sample, so n_train is the full 1M noisy set.
+        sop = SOPLoss(n_train=len(keys), n_classes=N_CLASSES, lr_u=SOP_ALPHA_U,
+                      lr_v=SOP_ALPHA_V, device=dev)
+        print(f"[tier2] SOP: alpha_u={SOP_ALPHA_U} alpha_v={SOP_ALPHA_V} "
+              f"projection to [-{SOP_PROJECT:g}, {SOP_PROJECT:g}] after each step; "
+              f"u {tuple(sop.u.shape)} v {tuple(sop.v.shape)}", flush=True)
+
     iters_per_epoch = len(loader)
     half = iters_per_epoch // CKPT_PER_EPOCH
     print(f"[tier2] {iters_per_epoch:,} iters/epoch, checkpoint every {half:,} iters "
@@ -151,11 +161,26 @@ def main(argv=None) -> int:
                 iters_per_epoch=iters_per_epoch, ckpt_every_iters=half,
                 backbone="resnet50", weights="ResNet50_Weights.IMAGENET1K_V1",
                 train_transform="Resize(256)+RandomCrop(224)+HFlip+ImageNetNorm",
+                sop=(dict(alpha_u=SOP_ALPHA_U, alpha_v=SOP_ALPHA_V, projection=SOP_PROJECT,
+                          lambda_C=0.0, lambda_B=0.0, init_std=1e-8, wd_uv=0.0,
+                          source="Table A.1 Clothing-1M column, arXiv:2202.14026v2, "
+                                 "VERIFIED; ruling 48-L2",
+                          lr_disclosure="main text 0.001 vs Table A.1 0.002; amendment pins "
+                                        "0.001 and it stands, disclosed not resolved")
+                     if a.learner == "sop" else None),
                 device_uuid_note="see PLACEMENT-style record in the launcher log",
                 code_stamp=stamp, classification="TIER2-VERIFIED-OFFICIAL-DATA")
     json.dump(meta, open(os.path.join(run_dir, "meta.json"), "w"), indent=1)
 
-    mf = open(os.path.join(run_dir, "metrics.jsonl"), "a")
+    # "a" would concatenate a relaunch onto the previous attempt's rows, which is how a
+    # restarted run ends up with 21 points and two point-01s. A run directory that already
+    # holds metrics is a previous attempt: refuse rather than silently merge or silently
+    # delete someone's data.
+    mpath = os.path.join(run_dir, "metrics.jsonl")
+    if os.path.exists(mpath) and os.path.getsize(mpath) > 0:
+        raise SystemExit(f"{mpath} already has rows from a previous attempt; remove the run "
+                         f"directory deliberately before relaunching")
+    mf = open(mpath, "w")
     t_run = time.time()
     step = 0
     for epoch in range(EPOCHS):
@@ -171,10 +196,29 @@ def main(argv=None) -> int:
             t1 = time.time()
             xb = xb.to(dev, non_blocking=True); yb = yb.to(dev, non_blocking=True)
             out = net(xb)
-            loss = crit(out, yb)
-            opt.zero_grad(set_to_none=True)
-            loss.backward()
-            opt.step()
+            if sop is None:
+                loss = crit(out, yb)
+                opt.zero_grad(set_to_none=True)
+                loss.backward()
+                opt.step()
+            else:
+                idxb = _idx.to(dev, non_blocking=True)
+                loss = sop(out, yb, idxb)
+                opt.zero_grad(set_to_none=True)
+                sop.zero_grad()
+                loss.backward()
+                opt.step()
+                sop.step()
+                # Projection to [-1, 1] after each step, per the Clothing-1M pin. It is done
+                # HERE and not in src/train/sop.py on purpose: that module is the code that
+                # produced the Tier-1 SOP results, and whether the projection is general to
+                # Algorithm 1 or specific to this column is an open question (see
+                # docs/TRANSCRIPTION.md). Leaving the shared module byte-identical keeps the
+                # Tier-1 artifacts and the module that made them in correspondence whichever
+                # way that ruling goes.
+                with torch.no_grad():
+                    sop.u.clamp_(-SOP_PROJECT, SOP_PROJECT)
+                    sop.v.clamp_(-SOP_PROJECT, SOP_PROJECT)
             torch.cuda.synchronize(dev)                     # so the span is real, not queued
             t_comp += time.time() - t1                      # span 2: forward/backward/step
             losses += float(loss) * yb.size(0); seen += yb.size(0)
@@ -189,7 +233,28 @@ def main(argv=None) -> int:
                            train_acc=correct / max(seen, 1), lr=opt.param_groups[0]["lr"],
                            seconds=round(wall, 1), loader_s=round(t_load, 1),
                            compute_s=round(t_comp, 1))
+                if sop is not None:
+                    # Without this the SOP arm is unfalsifiable. u and v start at std 1e-8, so
+                    # a run in which they never move is numerically CE plus a constant and
+                    # looks perfectly healthy from loss and accuracy alone. The checkpoints
+                    # store only the network, so it cannot be checked afterwards -- it has to
+                    # be recorded while it happens.
+                    with torch.no_grad():
+                        u, v = sop.u.detach(), sop.v.detach()
+                        rec["sop_u_absmean"] = float(u.abs().mean())
+                        rec["sop_v_absmean"] = float(v.abs().mean())
+                        rec["sop_u_absmax"] = float(u.abs().max())
+                        rec["sop_v_absmax"] = float(v.abs().max())
+                        rec["sop_u_frac_at_bound"] = float((u.abs() >= SOP_PROJECT).float().mean())
+                        rec["sop_v_frac_at_bound"] = float((v.abs() >= SOP_PROJECT).float().mean())
+                        rec["sop_u_frac_moved"] = float((u.abs() > 1e-6).float().mean())
+                        rec["sop_v_frac_moved"] = float((v.abs() > 1e-6).float().mean())
                 mf.write(json.dumps(rec) + "\n"); mf.flush()
+                if sop is not None:
+                    print(f"    SOP u |mean| {rec['sop_u_absmean']:.3e} max {rec['sop_u_absmax']:.3e} "
+                          f"moved {100*rec['sop_u_frac_moved']:.1f}% at-bound {100*rec['sop_u_frac_at_bound']:.2f}% | "
+                          f"v |mean| {rec['sop_v_absmean']:.3e} moved {100*rec['sop_v_frac_moved']:.1f}%",
+                          flush=True)
                 frac = t_load / max(t_load + t_comp, 1e-9)
                 print(f"  point {k:02d}/{CKPT_PER_EPOCH*EPOCHS} epoch {epoch} "
                       f"loss {rec['train_loss']:.4f} acc {rec['train_acc']:.4f} "

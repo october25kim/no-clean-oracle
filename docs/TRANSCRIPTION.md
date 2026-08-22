@@ -137,3 +137,59 @@ Until this is pinned, `configs/base.yaml` carries no `alpha` for CIFAR-N and
 `build_loss` keeps no default: the exception on a missing `alpha_u`/`alpha_v` stays as a
 guard, so the pinned values must be supplied by config and cannot be silently reinstated
 if the config is edited.
+
+## PIN — Clothing-1M column (received 2026-08-19, ruling 48-L2)
+
+Transcribed from the primary source: Table A.1, *Robust Training under Label Noise by
+Over-parameterization*, arXiv:2202.14026v2 / PMLR v162 pp.14153–14172, **Clothing-1M column**.
+
+| quantity | value |
+|---|---|
+| `alpha_u` (lr for u_i) | **0.1** |
+| `alpha_v` (lr for v_i) | **1** |
+| init std for {u_i, v_i} | 1e-8 |
+| weight decay for {u_i, v_i} | 0 |
+| `lambda_C` (consistency) | 0.0 |
+| `lambda_B` (class balance) | 0.0 |
+| u-update | CE(phi(f + s)) |
+| v-update | MSE, per Algorithm 1 |
+| projection | u, v projected to [-1, 1] after each step |
+
+`lambda_C = lambda_B = 0` confirms **plain SOP** for Clothing-1M — no SOP+ consistency or
+class-balance regularizer — consistent with the plain-SOP resolution already recorded above.
+
+**Attribution status: VERIFIED** against the paper text directly. This is a stronger status
+than the CIFAR-N `alpha` pin, which remains a registered choice among options rather than a
+transcription, and it therefore carries **no NEEDS-VERIFICATION flag**.
+
+### Disclosure — intra-paper learning-rate discrepancy (required by 48-L2)
+
+The paper's main text §2.2 states an initial learning rate of **0.001** for Clothing-1M; Table
+A.1 states **0.002**. The two disagree within the same paper. `tier2_amendment.md` pinned
+**0.001**, the main-text value, before this discrepancy was known; the CE runs have already
+executed under it (CE seed0 complete, 20/20; CE seed1 running). The pin **stands** for the SOP
+arm, so that both learners in Tier 2 share one optimizer configuration and the arm is
+internally consistent. The discrepancy is disclosed here rather than silently resolved, and any
+report using Tier-2 numbers carries it.
+
+### OPEN — is the [-1, 1] projection general to Algorithm 1, or specific to this column?
+
+**This needs a ruling and I cannot settle it from the repository.**
+
+The projection of `u, v` to `[-1, 1]` after each step appears in this pin. It appears **nowhere
+else**: not in this document before today, and not in `src/train/sop.py`, which implements
+`clamp(u^2 * label, 0, 1)` inside the loss. That clamp bounds the *loss term* and zeroes the
+gradient outside the range; it does not project the *parameter* after the optimizer step. The
+two are not equivalent — a parameter can drift outside [-1, 1] under the second and not the
+first, and its gradient contribution then stays clipped rather than being pulled back.
+
+The pin phrases the u- and v-updates as "per Algorithm 1", which reads as restating general
+algorithm properties for this column rather than naming Clothing-1M-specific behaviour. If the
+projection is likewise general to Algorithm 1, then **the twelve Tier-1 SOP runs already
+executed without it**, and that is a defect in executed artifacts, not a gap in a pending one.
+If it is specific to the Clothing-1M configuration, Tier 1 is unaffected.
+
+Pending that ruling: Tier 2 implements the projection **as pinned**, in the Tier-2 trainer
+rather than in `src/train/sop.py`. The shared module is the code that produced the Tier-1 SOP
+results and is left byte-identical, so that whichever way the ruling goes, the Tier-1 artifacts
+and the module that made them still correspond.
